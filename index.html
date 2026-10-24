@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#2d6a3e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Quebra FLV">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Quebra FLV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: app de uma coluna para celular — busca fixa no topo, lista de produtos, barra de ação fixa embaixo */
+:root{
+  --bg:#f6f6f3; --surface:#ffffff; --fg:#17191a; --muted:#64696b; --line:#dfe1dc;
+  --accent:#2d6a3e; --accent-fg:#ffffff; --accent-soft:#e3efe5; --danger:#b3261e; --chip:#ecedea;
+  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111413; --surface:#1a1e1c; --fg:#eceeea; --muted:#9aa19c; --line:#2c322f;
+  --accent:#6fbf82; --accent-fg:#0d1a11; --accent-soft:#1f3326; --danger:#ff8a80; --chip:#232825; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111413; --surface:#1a1e1c; --fg:#eceeea; --muted:#9aa19c; --line:#2c322f;
+  --accent:#6fbf82; --accent-fg:#0d1a11; --accent-soft:#1f3326; --danger:#ff8a80; --chip:#232825; color-scheme:dark}
+html,body{margin:0}
+body{line-height:1.3}
+img{max-width:100%}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{padding-block:12px 10px;display:grid;gap:10px}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.brand h1{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.01em;margin:0;text-transform:uppercase}
+.brand small{color:var(--muted);font-size:13px;white-space:nowrap}
+.search{position:relative}
+.search input{width:100%;font:inherit;font-size:17px;padding:12px 40px 12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);outline:none}
+.search input:focus{border-color:var(--accent)}
+.search button{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--muted);font-size:20px;width:34px;height:34px;border-radius:8px;cursor:pointer}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-2px;padding:0 2px 2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--chip);color:var(--fg);font:inherit;font-size:13px;font-weight:600;padding:6px 11px;border-radius:999px;cursor:pointer;letter-spacing:.02em}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.chip .n{opacity:.75;font-weight:500;margin-left:4px}
+main .wrap{padding-block:8px 120px}
+.status{color:var(--muted);font-size:13px;padding:6px 2px 8px;display:flex;justify-content:space-between;gap:8px}
+ul.list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+li.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
+li.row:first-child{border-top:0}
+li.row.has{background:var(--accent-soft)}
+.pname{font-weight:600;font-size:15px;line-height:1.25;overflow-wrap:anywhere}
+.pmeta{color:var(--muted);font-size:12.5px;margin-top:2px;font-variant-numeric:tabular-nums;display:flex;gap:6px;flex-wrap:wrap}
+.pmeta .tag{font-weight:600;letter-spacing:.03em;text-transform:uppercase;font-size:11px;padding:1px 6px;border-radius:4px;background:var(--chip)}
+.qty{display:flex;align-items:center;gap:6px}
+.qty input{width:78px;font:inherit;font-size:17px;font-weight:600;text-align:right;padding:9px 10px;border:1.5px solid var(--line);border-radius:9px;background:var(--bg);color:var(--fg);font-variant-numeric:tabular-nums;outline:none}
+.qty input:focus{border-color:var(--accent);background:var(--surface);width:118px}
+.qty{position:relative}
+.plus{width:34px;height:40px;border:1.5px solid var(--accent);border-radius:9px;background:transparent;color:var(--accent);font:inherit;font-size:22px;font-weight:700;line-height:1;cursor:pointer;visibility:hidden}
+.row.has .plus,.row:focus-within .plus{visibility:visible}
+.plus:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.soma{position:absolute;right:0;top:100%;margin-top:2px;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+.diag{font-size:12px;color:var(--muted)}
+.qty .u{font-size:12px;color:var(--muted);width:20px;font-weight:600}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:28px 18px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--fg);font-size:16px;margin-bottom:4px}
+.more{display:block;width:100%;margin-top:10px;padding:12px;font:inherit;font-weight:600;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);cursor:pointer}
+footer.bar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+footer.bar .wrap{padding-block:10px;display:flex;align-items:center;gap:10px}
+.count{flex:1;min-width:0;font-size:14px;line-height:1.2}
+.count b{font-family:var(--display);font-size:22px;display:block}
+.btn{font:inherit;font-weight:700;font-size:15px;border-radius:10px;padding:12px 16px;cursor:pointer;border:1.5px solid transparent}
+.btn.primary{background:var(--accent);color:var(--accent-fg)}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--fg)}
+.btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.chip:focus-visible,.search button:focus-visible,.more:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+.panel{background:var(--surface);width:100%;max-width:560px;border-radius:16px 16px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;gap:14px}
+.sheet .panel{max-height:94vh;max-height:94dvh;overflow-y:auto}
+.backup{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.backup>span{font-size:12.5px;color:var(--muted)}
+#print{display:none}
+@media print{
+  @page{size:A4 portrait;margin:14mm 13mm}
+  html,body{background:#fff!important}
+  body>*:not(#print){display:none!important}
+  body::before{display:none!important}
+  #print{display:block;color:#000;font-family:Arial,Helvetica,sans-serif}
+  .ph{position:relative;text-align:center;font-weight:700;font-size:9.5pt;line-height:1.36;padding:0 36mm;margin-bottom:1.5mm}
+  .ph div{white-space:nowrap}
+  .ph img{position:absolute;right:6mm;top:5mm;width:29.5mm}
+  .pt{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8pt}
+  .pt th,.pt td{border:.2mm solid #000;padding:.45mm 1mm;height:4.15mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pt th{background:#bfbfbf!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pt td.c{text-align:center}
+  .pt td.q{font-weight:700}
+  .pt tr.sec td{background:#d9d9d9!important;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pt tr{break-inside:avoid}
+}
+.panel h2{font-family:var(--display);font-size:20px;margin:0;text-transform:uppercase;letter-spacing:.02em}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input{margin-top:3px;accent-color:var(--accent)}
+.opt span{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.actions .btn{flex:1}
+.msg{font-size:14px;padding:10px 12px;border-radius:9px;background:var(--chip)}
+.msg.err{color:var(--danger)}
+.add{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:12px;padding:13px;font:inherit;font-weight:600;font-size:15px;border:1.5px dashed var(--accent);border-radius:10px;background:transparent;color:var(--accent);cursor:pointer}
+.add span{font-size:20px;line-height:1}
+.add:focus-visible,.rm:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.empty .add{margin-top:14px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.field{display:grid;gap:5px;min-width:0}
+.field span{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.field input,.field select{width:100%;font:inherit;font-size:17px;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--bg);color:var(--fg);outline:none}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.pmeta .tag.meu{background:var(--accent);color:var(--accent-fg)}
+.rm{border:0;background:transparent;color:var(--danger);font:inherit;font-size:12.5px;font-weight:600;padding:0 2px;cursor:pointer;text-decoration:underline}
+.searchrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.scan{display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-fg);font:inherit;font-weight:700;font-size:14px;padding:0 14px;cursor:pointer;min-height:48px}
+.scan svg{width:24px;height:24px}
+.scan:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.scan.busy{opacity:.6;pointer-events:none}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0);pointer-events:none}
+.lido{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:13.5px}
+.lido code{font-family:ui-monospace,Menlo,monospace;font-size:13px;font-variant-numeric:tabular-nums}
+.link{border:0;background:transparent;color:var(--accent);font:inherit;font-weight:700;font-size:13.5px;cursor:pointer;padding:4px 0;text-decoration:underline}
+.codebox{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;background:var(--chip);border-radius:9px;padding:10px 12px}
+.codebox code{font-family:ui-monospace,Menlo,monospace;font-size:17px;font-weight:700;letter-spacing:.04em}
+.codebox span{color:var(--muted);font-size:13px}
+.panel p{margin:0;color:var(--muted);font-size:14px;line-height:1.4}
+.pick{list-style:none;margin:0;padding:0;max-height:38vh;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+.pick li+li{border-top:1px solid var(--line)}
+.pick button{display:block;width:100%;text-align:left;border:0;background:var(--surface);color:var(--fg);font:inherit;padding:10px 12px;cursor:pointer}
+.pick button:active,.pick button:focus-visible{background:var(--accent-soft);outline:none}
+.pick b{display:block;font-size:14.5px;font-weight:600}
+.pick small{color:var(--muted);font-size:12px}
+.cam{position:fixed;inset:0;z-index:40;background:#000;color:#fff}
+.cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.mira{position:absolute;left:8%;right:8%;top:32%;height:24%;border:3px solid rgba(255,255,255,.9);border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
+.mira span{position:absolute;left:6%;right:6%;top:50%;height:2px;background:#ff3b30;box-shadow:0 0 8px #ff3b30}
+@media (prefers-reduced-motion:no-preference){.mira span{animation:varre 1.6s ease-in-out infinite alternate}@keyframes varre{from{top:12%}to{top:88%}}}
+.camtop{position:absolute;left:0;right:0;top:0;padding:max(16px,env(safe-area-inset-top)) 16px 16px;text-align:center;font-weight:600;font-size:16px;text-shadow:0 1px 3px #000}
+.cambar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:16px 16px max(20px,env(safe-area-inset-bottom))}
+.camgh{background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.5)}
+.camgh[aria-pressed="true"]{background:#fff;color:#000}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:no-preference){.panel{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Quebra de FLV</h1><small id="hoje"></small></div>
+    <div class="searchrow">
+      <div class="search">
+        <input id="q" type="search" placeholder="Buscar produto ou código" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search" aria-label="Buscar produto ou código">
+        <button id="limparBusca" type="button" aria-label="Limpar busca" hidden>×</button>
+      </div>
+      <button class="scan" id="scan" type="button" aria-label="Ler código de barras"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8" stroke-width="1.6"/></svg></button>
+      <input type="file" id="foto" class="vh" accept="image/*">
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Filtrar"></div>
+  </div>
+</header>
+
+<main><div class="wrap">
+  <div class="lido" id="lido" hidden><span>Código lido: <code id="lidoCod"></code></span><button class="link" id="trocar" type="button">Não é esse produto?</button></div>
+  <div class="status"><span id="info"></span><span id="info2"></span></div>
+  <ul class="list" id="lista"></ul>
+  <div class="empty" id="vazio" hidden></div>
+  <button class="more" id="mais" type="button" hidden>Mostrar mais</button>
+  <button class="add" id="abrirNovo" type="button"><span>+</span> Cadastrar produto que não está na lista</button>
+</div></main>
+
+<div class="sheet" id="novo" hidden>
+  <form class="panel" id="formNovo" role="dialog" aria-modal="true" aria-labelledby="novoTitle" novalidate>
+    <h2 id="novoTitle">Produto fora da lista</h2>
+    <div class="grid2">
+      <label class="field"><span>Código</span><input id="nCod" inputmode="numeric" autocomplete="off" enterkeyhint="next" placeholder="Ex.: 40123"></label>
+      <label class="field"><span>Embalagem</span><select id="nEmb"><option value="KG 1">KG</option><option value="UN 1">UN</option></select></label>
+    </div>
+    <label class="field"><span>Nome do produto</span><input id="nNome" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" placeholder="Ex.: MANGA PALMER KG"></label>
+    <div class="grid2">
+      <label class="field"><span>Estrutura (aba)</span><select id="nAba"></select></label>
+      <label class="field"><span>Quantidade</span><input id="nQtd" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Opcional"></label>
+    </div>
+    <div class="msg err" id="novoMsg" hidden></div>
+    <div class="actions">
+      <button class="btn ghost" id="fecharNovo" type="button">Cancelar</button>
+      <button class="btn primary" type="submit">Salvar produto</button>
+    </div>
+  </form>
+</div>
+
+<footer class="bar"><div class="wrap">
+  <div class="count"><b id="total">0</b><span id="totalTxt">itens lançados</span></div>
+  <button class="btn primary" id="abrirPdf" type="button">Gerar PDF</button>
+</div></footer>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">Imprimir planilha</h2>
+    <div class="grid2" style="grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)">
+      <label class="field"><span>Tipo de lançamento</span><select id="tipo"><option value="AVARIAS">Avarias</option><option value="REAPROVEITAMENTO">Reaproveitamento</option><option value="REFEITÓRIO">Refeitório</option></select></label>
+      <label class="field"><span>Data</span><input type="date" id="dataPdf"></label>
+    </div>
+    <label class="opt"><input type="radio" name="modo" id="modoLancados" value="lancados" checked><div><b>Só os itens lançados</b><span>Mesmo layout da planilha, só com as linhas que têm quantidade.</span></div></label>
+    <label class="opt"><input type="radio" name="modo" id="modoCompleto" value="completo"><div><b>Planilha completa</b><span>Todas as abas e todos os produtos, com as quantidades preenchidas.</span></div></label>
+    <div class="msg" id="pdfMsg" hidden></div>
+    <div class="actions">
+      <button class="btn primary" id="imprimir" type="button">Imprimir</button>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="baixar" type="button">Baixar PDF</button>
+      <button class="btn ghost" id="compartilhar" type="button" hidden>Compartilhar</button>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="fechar" type="button">Voltar</button>
+    </div>
+    <div class="actions" id="zonaLimpar">
+      <button class="btn danger" id="limpar" type="button">Zerar lançamentos</button>
+    </div>
+    <div class="actions" id="confirmaLimpar" hidden>
+      <button class="btn ghost" id="naoLimpar" type="button">Cancelar</button>
+      <button class="btn danger" id="simLimpar" type="button">Sim, zerar tudo</button>
+    </div>
+    <div class="backup">
+      <span>Backup dos dados (lançamentos, produtos cadastrados e códigos ligados)</span>
+      <div class="actions">
+        <button class="btn ghost" id="exportar" type="button">Exportar</button>
+        <label class="btn ghost" for="importar" style="text-align:center">Importar</label>
+        <input type="file" id="importar" class="vh" accept=".json,application/json">
+      </div>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="vinc" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="vincTitle">
+    <h2 id="vincTitle">Código novo</h2>
+    <div class="codebox"><code id="vCod"></code><span id="vTipo"></span></div>
+    <p id="vTxt">Esse código ainda não está ligado a nenhum produto. Escolha qual é: nas próximas leituras ele já aparece direto.</p>
+    <div class="field"><input id="vBusca" type="search" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Buscar produto ou código interno" aria-label="Buscar produto para ligar ao código"></div>
+    <ul class="pick" id="vLista"></ul>
+    <div class="actions">
+      <button class="btn ghost" id="vFechar" type="button">Cancelar</button>
+      <button class="btn ghost" id="vNovo" type="button">Não está na lista</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="falha" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="falhaTitle">
+    <h2 id="falhaTitle">Não consegui ler</h2>
+    <p>Tire a foto mais perto, com o código de barras reto, inteiro na foto e sem reflexo do plástico. Ou digite os números que estão embaixo das barras.</p>
+    <div class="diag" id="diag"></div>
+    <div class="field"><input id="fCod" inputmode="numeric" autocomplete="off" placeholder="Ex.: 2002310008699" aria-label="Números do código de barras"></div>
+    <div class="actions">
+      <button class="btn ghost" id="fDigitado" type="button">Usar números</button>
+      <button class="btn primary" id="fDenovo" type="button">Ler de novo</button>
+    </div>
+    <div class="actions"><button class="btn ghost" id="fFechar" type="button">Fechar</button></div>
+  </div>
+</div>
+<div class="cam" id="cam" hidden>
+  <video id="video" playsinline muted autoplay></video>
+  <div class="mira" aria-hidden="true"><span></span></div>
+  <div class="camtop"><span id="camMsg">Aponte para o código de barras</span></div>
+  <div class="cambar">
+    <label class="btn camgh" for="foto">Usar foto</label>
+    <button class="btn camgh" id="camLuz" type="button" hidden>Lanterna</button>
+    <button class="btn primary" id="camFechar" type="button">Fechar</button>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div id="print"></div>
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/jspdf.plugin.autotable.min.js"></script>
+<script>
+const ABAS = [{"aba":"ALHO, FRUTAS E LEGUMES","estrutura":"ESTRUTURA MERCADOLÓGICA: ALHO, FRUTAS E LEGUMES","itens":[["6690","ABACATE KG","KG 1"],["30673","ABACAXI DOCE MEL UND","UN 1"],["32954","ABACAXI GOMINHO UND","UN 1"],["7066","ABACAXI PEROLA UND","UN 1"],["6693","ABIU KG","KG 1"],["7072","ABOBORA BAIANA KG","KG 1"],["17775","ABOBORA BATA KG","KG 1"],["31745","ABOBORA ITALIA AMARELA KG","KG 1"],["7074","ABOBORA ITALIA KG","KG 1"],["6695","ABOBORA JAPONESA KG","KG 1"],["6700","ABOBORA MENINA KG","KG 1"],["10310","ABOBORA MORANGA KG","KG 1"],["18610","ABOBORA PRE COZIDA 1KG","UN 1"],["33394","ABOBORA PREMIUM 400G","UN 1"],["23035","ABOBORA PREMIUM KG BJ","KG 1"],["6701","ABOBORA PUMPKINO KG","KG 1"],["6702","ABOBORA SECA KG","KG 1"],["38382","ACAFRAO UND IN NATURA","UN 1"],["12185","ACEROLA 500G BJ","UN 1"],["11048","ACEROLA FRESCA 500G","UN 1"],["37833","ACHAICHAIRU BJ","UN 1"],["26300","ALECRIM PT","UN 1"],["6710","ALHO KG","KG 1"],["32845","ALHO ZANETTI 300G GRAUDO","UN 1"],["22874","AMEIXA 500G BJ","UN 1"],["6715","AMEIXA BRANCA IMPORTADA KG","KG 1"],["11201","AMEIXA DAGEM KG","KG 1"],["6716","AMEIXA IMPORTADA KG","KG 1"],["20590","AMEIXA NACIONAL 500G BJ","UN 1"],["6717","AMEIXA NACIONAL KG","KG 1"],["23291","AMEIXA NACIONAL PERBONI 500G","UN 1"],["29186","AMEIXA PREMIUM KG","KG 1"],["6721","AMORA 100G PRETA BJ","UN 1"],["6722","AMORA 170G BJ","UN 1"],["24958","AMORA BERRY GOOD 125G","UN 1"],["24957","AMORA BERRY GOOD 170G NACIONAL","UN 1"],["33133","AMORA FRESCA 80G BDJ","UN 1"],["25112","AMORA IN NATURA KG","KG 1"],["6723","AMORA UND BJ","UN 1"],["26304","ARRUDA PT","UN 1"],["11198","ASPARGO VERDE BERRY GOOD 450G","UN 1"],["6727","ASPARGO VERDE KG","KG 1"],["6728","ATEMOIA KG","KG 1"],["33113","AVOCADO 500G BOWL","UN 1"],["32178","AVOCADO 600G PCT","UN 1"],["33114","AVOCADO 800G BABY","UN 1"],["6729","AVOCADO KG","KG 1"],["32020","BACUPARI 500G","UN 1"],["12187","BANANA MACA KG","KG 1"],["12188","BANANA MARMELO KG","KG 1"],["8164","BANANA NANICA KG","KG 1"],["11257","BANANA OURO KG","KG 1"],["6731","BANANA PRATA KG","KG 1"],["10307","BANANA TERRA KG","KG 1"],["6732","BATATA ASTERIX KG","KG 1"],["38060","BATATA ASTERIX PCT 1KG","UN 1"],["32847","BATATA ASTERIX ZANETTI 700G","UN 1"],["15436","BATATA BAROA KG","KG 1"],["33445","BATATA BAROA ORGÂNICA 500G","UN 1"],["6733","BATATA BAROA PACOTE 500G","UN 1"],["33275","BATATA BOLINHA 1KG","UN 1"],["32848","BATATA BOLINHA ZANETTI 700G","UN 1"],["6734","BATATA DOCE KG","KG 1"],["6735","BATATA DOCE KG BRANCA","KG 1"],["6737","BATATA DOCE KG ROXA","KG 1"],["6740","BATATA INGLESA KG","KG 1"],["32846","BATATA INGLESA ZANETTI 700G","UN 1"],["33508","BATATA PERBONI SELECT 750G APERITIVO","UN 1"],["6741","BATATA YACON KG","KG 1"],["6744","BERINJELA KG","KG 1"],["6746","BERINJELA KG BABY","KG 1"],["11272","BERINJELA KG RAJADA","KG 1"],["7088","BETERRABA KG","KG 1"],["6750","CACAU KG","KG 1"],["35635","CAJA MANGA 400G","UN 1"],["12189","CAJAMANGA KG","KG 1"],["11247","CAJU 300G","UN 1"],["6751","CAJU BJ","UN 1"],["6754","CAJU DELICAT 350G","UN 1"],["32019","CANISTEL 400G","UN 1"],["6755","CANISTEL KG","KG 1"],["11336","CAPIM REI DOS BROTOS 70G TRIGO","UN 1"],["6799","CAQUI CHOCOLATE KG","KG 1"],["6811","CAQUI CP 1KG","UN 1"],["6802","CAQUI ESPANHOL KG","KG 1"],["6804","CAQUI FUYU KG","KG 1"],["11263","CAQUI KIOTO KG","KG 1"],["6807","CAQUI MEL BJ","UN 1"],["6815","CAQUI MEL KG","KG 1"],["21636","CAQUI RAMA FORTE UND BJ","UN 1"],["11245","CARA DO NORTE KG","KG 1"],["7093","CARA KG","KG 1"],["10026","CARAMBOLA BJ","UN 1"],["10029","CARAMBOLA KG","KG 1"],["11854","CEBOLA BRANCA KG","KG 1"],["32849","CEBOLA BRANCA ZANETTI 700G","UN 1"],["38378","CEBOLA COLOSSAL 400G TURMA DA MONICA","UN 1"],["33307","CEBOLA CONSERVA 1KG","UN 1"],["10033","CEBOLA CONSERVA KG","KG 1"],["32851","CEBOLA CONSERVA ZANETTI 700G","UN 1"],["7708","CEBOLA KG","KG 1"],["33518","CEBOLA PERBONI SELECT 750G BRANCA","UN 1"],["38376","CEBOLA ROXA 400G TURMA DA MONICA","UN 1"],["10042","CEBOLA ROXA KG","KG 1"],["33306","CEBOLA ROXA ZANETTI 1KG","UN 1"],["32850","CEBOLA ROXA ZANETTI 700G","UN 1"],["33888","CEBOLA ZANETTI 1KG","UN 1"],["38379","CEBOLINHA CONSERVA 1KG TURMA DA MONICA","UN 1"],["6763","CENOURA BABY KG","KG 1"],["90","CENOURA KG","KG 1"],["6766","CENOURINHA BABY 250G","UN 1"],["11205","CENOURINHA BABY CARROT 250G","UN 1"],["26553","CEREJA 250G","UN 1"],["26663","CEREJA FRESCA 1KG","UN 1"],["6821","CEREJA FRESCA KG","KG 1"],["7440","CEREJA FRESCA PCT","UN 1"],["26555","CEREJA MEU LANCHINHO 500G","UN 1"],["89","CHUCHU KG","KG 1"],["10229","COCO SECO KG","KG 1"],["10446","COCO VERDE UND","UN 1"],["6772","COGUMELO HERENGUI 200G","UN 1"],["6774","COGUMELO PARIS 250G","UN 1"],["11979","COGUMELO PARIS 300G","UN 1"],["6776","COGUMELO PORTOBELLO 200G","UN 1"],["6778","COGUMELO SALMAO 200G","UN 1"],["6782","COGUMELO SHIMEJI 200G","UN 1"],["6785","COGUMELO SHIMEJI 200G BRANCO","UN 1"],["34663","COGUMELO SHIMEJI DESIDRATADO KG","KG 1"],["6789","COGUMELO SHITAKE 200G","UN 1"],["6791","COGUMELO SUJO 500G BJ","UN 1"],["7188","COUVE FLOR 300G ROXA","UN 1"],["6798","CUPUACU KG","KG 1"],["12190","DAMASCO FRESCO KG","KG 1"],["26554","DAMASCO MEU LANCHINHO 500G","UN 1"],["17134","DAMASCO NEGRO KG","KG 1"],["6007","ERVILHA FRESCA KG BJ","KG 1"],["32051","ERVILHA TORTA 200G","UN 1"],["32023","FIGO DA INDIA 250G","UN 1"],["12192","FIGO DA INDIA 250G BJ","UN 1"],["18612","FIGO PRE COZIDO 1KG","UN 1"],["6834","FIGO PRE COZIDO 800G P/DOCE","UN 1"],["36688","FIGO ROXO 1,5KG PREMIUM","UN 1"],["23157","FIGO ROXO 400G CESTA","UN 1"],["6838","FIGO ROXO BJ","UN 1"],["6850","FRAMBOESA 100G BJ","UN 1"],["6845","FRAMBOESA 125G BJ","UN 1"],["24959","FRAMBOESA BERRY GOOD 125G IMPORT","UN 1"],["11196","FRAMBOESA BERRY GOOD 80G","UN 1"],["25110","FRAMBOESA IN NATURA KG","KG 1"],["10047","GENGIBRE KG","KG 1"],["36785","GOIABA BJ ROMEU E JULIETA","UN 1"],["6855","GOIABA BRANCA KG","KG 1"],["6856","GOIABA VERMELHA KG","KG 1"],["33964","GOLDEN BERRY 100G","UN 1"],["6866","GRANADILHA KG","KG 1"],["6873","GRAPEFRUIT KG","KG 1"],["6870","GRAVIOLA KG","KG 1"],["18271","GROSELHA BERRY GOOD 125G","UN 1"],["24960","GROSELHA BERRY GOOD 125G IMPORT","UN 1"],["6874","GUARIROBA MARIA ROSA 200G","UN 1"],["38793","HORTELA MACO UND","UN 1"],["26289","HORTELA PT","UN 1"],["10228","INHAME KG","KG 1"],["20264","JABUTICABA 450G BJ","UN 1"],["22627","JABUTICABA 500G BJ","UN 1"],["7449","JABUTICABA ESPECIAL 1KG CX","UN 1"],["12193","JABUTICABA KG","KG 1"],["6878","JAMBO ROSA KG BJ","UN 1"],["6881","JAMELAO KG","KG 1"],["32016","JATOBA 300G","UN 1"],["32021","JENIPAPO 300G","UN 1"],["32050","JILO 300G","UN 1"],["6015","JILO EMBALADO KG","KG 1"],["6013","JILO EMBALADO KG BJ","KG 1"],["6016","JILO KG","KG 1"],["6891","KINO KG","KG 1"],["6897","KIWI BJ","UN 1"],["6901","KIWI KG","KG 1"],["25069","KIWI NACIONAL KG INATIVO","KG 1"],["17141","KIWI SUNGOLD ZESPRI 440G","UN 1"],["39507","KIWI ZESPRI GREEN KG","KG 1"],["6905","LARANJA BAHIA KG","KG 1"],["39353","LARANJA CHAMPANHE KG","KG 1"],["33468","LARANJA KINKAN 500G","UN 1"],["6887","LARANJA KINKAN KG","KG 1"],["6913","LARANJA LIMA KG","KG 1"],["32172","LARANJA LIMA PCT 2KG","UN 1"],["6917","LARANJA P/DOCE 800G","UN 1"],["6920","LARANJA PERA KG","KG 1"],["26162","LARANJA PERA PCT 3KG","UN 1"],["26008","LARANJA PERA PCT 5KG","UN 1"],["18006","LARANJA PRE COZIDA 1KG","UN 1"],["12195","LARANJA SELETA KG","KG 1"],["26305","LAVANDA PT","UN 1"],["11984","LICHIA UND","UN 1"],["6924","LIMA DA PERSIA KG","KG 1"],["14559","LIMAO 500G ORGANICO","UN 1"],["34252","LIMAO CAVIAR KG","KG 1"],["32017","LIMAO CRAVO 500G","UN 1"],["12197","LIMAO CRAVO KG","KG 1"],["6928","LIMAO KG","KG 1"],["32173","LIMAO PCT 1KG","UN 1"],["6930","LIMAO SICILIANO KG","KG 1"],["33346","LIMAO TAHITI PCT 1KG","UN 1"],["30637","LONGAN 530G","UN 1"],["6938","MACA ARGENTINA KG","KG 1"],["36320","MACA BELGALA KG","KG 1"],["6941","MACA DISNEY 1KG FUJI","UN 1"],["6952","MACA FUJI KG","KG 1"],["6955","MACA GALA KG","KG 1"],["29277","MACA GOLDEN KG","KG 1"],["31804","MACA ISABEL KG","KG 1"],["6964","MACA LOONEY TUNES 1KG","UN 1"],["6943","MACA PACOTE 1KG","UN 1"],["36793","MACA PACOTE 1KG PINK LADY","UN 1"],["30565","MACA PACOTE 850G","UN 1"],["6972","MACA PINK LADY KG","KG 1"],["6974","MACA SCHIO 1KG DISNEY FUJI","UN 1"],["6979","MACA TURMA DA MONICA 1KG","UN 1"],["6981","MACA VERDE KG","KG 1"],["6950","MAMAO FORMOSA KG","KG 1"],["32179","MAMAO PAPAYA 1,5KG GOLDEM PREMIUM","UN 1"],["32472","MAMAO PAPAYA 1.5KG MONICA","UN 1"],["6983","MAMAO PAPAYA KG","KG 1"],["6987","MAMAO PICADO P/ DOCE 800G","UN 1"],["30047","MAMAO PRE COZIDO 800G","UN 1"],["32018","MANA CUBIU 400G","UN 1"],["6991","MANA CUBIU KG","KG 1"],["11077","MANDIOCA BELA HORTIFRUTI 700G DESCASCADA","UN 1"],["19388","MANDIOCA DESCASCADA KG PRODUCAO","KG 1"],["29948","MANDIOCA TANAKA 700G DESCASCADA","UN 1"],["6992","MANGA BORBOM KG","KG 1"],["12198","MANGA ESPADA KG","KG 1"],["6994","MANGA HADEM KG","KG 1"],["15110","MANGA KEITT KG","KG 1"],["6995","MANGA OURO KG","KG 1"],["6996","MANGA PALMER KG","KG 1"],["6999","MANGA ROSA KG","KG 1"],["37568","MANGA SHELLY KG","KG 1"],["7000","MANGA SWEET VALLEY KG","KG 1"],["7004","MANGA TOMMY KG","KG 1"],["27180","MANGOSTIN KG","KG 1"],["7008","MANGOSTIN UND","UN 1"],["26299","MANJERICAO ROXO PT","UN 1"],["26298","MANJERICAO VERDE PT","UN 1"],["7699","MARACUJA AZEDO KG","KG 1"],["12199","MARACUJA DOCE KG","KG 1"],["7013","MARMELO KG","KG 1"],["32048","MAXIXE 300G","UN 1"],["6020","MAXIXE KG","KG 1"],["6018","MAXIXE KG BJ","KG 1"],["7014","MELANCIA BABY KG TURMA DA MONICA","KG 1"],["7021","MELANCIA KG","KG 1"],["29141","MELANCIA PINGO DOCE KG","KG 1"],["36364","MELANCIA SOET KG S/SEMENTE","KG 1"],["10601","MELANCIA UND","UN 1"],["34396","MELAO AMARELO KG","KG 1"],["7031","MELAO ANDINO KG","KG 1"],["7042","MELAO CAIPIRA KG","KG 1"],["7043","MELAO CANTALOUPE KG","KG 1"],["7023","MELAO CEPI KG","KG 1"],["7049","MELAO DINO KG","KG 1"],["7051","MELAO GALIA KG","KG 1"],["22570","MELAO MATISSE KG","KG 1"],["7052","MELAO ORANGE KG","KG 1"],["7054","MELAO REI KG","KG 1"],["11276","MELAO SAO CAETANO BJ","UN 1"],["11259","MEXERICA BABY KG","KG 1"],["10052","MEXERICA CRAVO KG","KG 1"],["10057","MEXERICA DEKOPON KG","KG 1"],["10060","MEXERICA HELENDALLE KG","KG 1"],["10062","MEXERICA MURCOTT KG","KG 1"],["10065","MEXERICA PONKAN KG","KG 1"],["10072","MEXERICA VERONA KG","KG 1"],["35577","MILHO PERBONI 140G MINI","UN 1"],["14938","MILHO VERDE 850G","UN 1"],["7107","MILHO VERDE BJ","UN 1"],["35883","MILHO VERDE BJ DOCE","UN 1"],["17774","MILHO VERDE SWEET TREBESCHI 450G","UN 1"],["19535","MILHO VERDE UND PRODUCAO","UN 1"],["17361","MINI CEBOLA MISTER RABBIT 283G GOLD","UN 1"],["25260","MINI PIMENTAO TREBESCHI 200G ORGAN","UN 1"],["33543","MINI PIMENTAO TREBESCHI 350G COLORIDO","UN 1"],["22628","MINI TANGERINA KG","KG 1"],["23093","MIRTILO 100G BJ","UN 1"],["11180","MIRTILO BERRY GOOD 125G IMPORT 6X1","UN 1"],["33968","MIRTILO BERRY GOOD 400G","UN 1"],["24961","MIRTILO BJ","UN 1"],["7061","MIRTILO NATURIPE 125G","UN 1"],["7064","MIRTILO UND","UN 1"],["7056","MIRTILO UND BJ","UN 1"],["20647","MIX DE BERRIES BERRY GOOD 200G","UN 1"],["25109","MIX DE BERRIES KG","KG 1"],["35658","MIX DE FRUTAS VERMELHAS KG","KG 1"],["34668","MIX DE NUTS DEFUMADO KG","KG 1"],["22572","MORANGO 250G FONDEE","UN 1"],["39329","MORANGO 350G BJ","UN 1"],["29934","MORANGO 450G BJ","UN 1"],["34309","MORANGO 500G BJ","UN 1"],["26656","MORANGO 750G","UN 1"],["21719","MORANGO AP 250G BJ","UN 1"],["21718","MORANGO AP 400G","UN 1"],["24953","MORANGO BERRY GOOD 250G CONVENC","UN 1"],["24955","MORANGO BERRY GOOD 300G NACIONAL CAMADA","UN 1"],["7067","MORANGO BJ","UN 1"],["26204","MORANGO BJ PRODUCAO","UN 1"],["22736","MORANGO KG","KG 1"],["7070","NECTARINA IMPORTADA KG","KG 1"],["7071","NECTARINA NACIONAL KG","KG 1"],["7073","NESPERA BJ","UN 1"],["7075","NESPERA KG","KG 1"],["7076","NONI BJ","UN 1"],["26303","OREGANO PT","UN 1"],["38042","PALMITO UND PUPUNHA TOLETE","UN 1"],["7113","PEPINO CAIPIRA KG","KG 1"],["22900","PEPINO HOLANDES KG PREMIUM","KG 1"],["7083","PEPINO JAPONES KG","KG 1"],["11254","PEPINO P/CONSERVA KG","KG 1"],["7116","PEPINO PRETO KG","KG 1"],["7122","PEQUI BJ","UN 1"],["10078","PERA ASIATICA KG","KG 1"],["10081","PERA BABY KG","KG 1"],["10077","PERA ERCOLINI 1KG","UN 1"],["22666","PERA FORELLE 1KG","UN 1"],["10088","PERA FORELLE KG","KG 1"],["21749","PERA PORTUGUESA 1KG","UN 1"],["35526","PERA PORTUGUESA 800G","UN 1"],["7742","PERA PORTUGUESA KG","KG 1"],["10091","PERA RED KG","KG 1"],["7741","PERA WILLIAMS KG","KG 1"],["7089","PESSEGO IMPORTADO KG","KG 1"],["17142","PESSEGO NACIONAL 1KG","UN 1"],["7090","PESSEGO NACIONAL KG","KG 1"],["32008","PESSEGO ROSQUINHA KG","KG 1"],["12203","PHISALIS POTE","UN 1"],["7091","PHYSALIS 100G","UN 1"],["11226","PHYSALIS BERRY GOOD 100G","UN 1"],["7092","PIMENTA AMERICANA KG","KG 1"],["35532","PIMENTA BIQUINHO 100G","UN 1"],["35122","PIMENTA BODE 100G","UN 1"],["30580","PIMENTA BODE 50G VERMELHA","UN 1"],["7096","PIMENTA BODE KG","KG 1"],["14866","PIMENTA CALABRESA KG","KG 1"],["20751","PIMENTA CHOCOLATE KG","KG 1"],["36974","PIMENTA CUMARI 100G","UN 1"],["7102","PIMENTA CUMARI KG","KG 1"],["7103","PIMENTA DE BICO KG","KG 1"],["39531","PIMENTA DE CHEIRO 100G","UN 1"],["7127","PIMENTA DE CHEIRO KG","KG 1"],["35120","PIMENTA DEDO DE MOCA 100G VERMELHA","UN 1"],["30581","PIMENTA DEDO DE MOCA 80G AMARELA","UN 1"],["30582","PIMENTA DEDO DE MOCA 80G VERMELHA","UN 1"],["7104","PIMENTA DEDO DE MOCA KG","KG 1"],["14937","PIMENTA DOCE PALERMO 200G","UN 1"],["7108","PIMENTA EXTRA FORTE KG AMARELA","KG 1"],["7112","PIMENTA EXTRA FORTE KG VERMELHA","KG 1"],["35531","PIMENTA HABANERO 100G","UN 1"],["35121","PIMENTA MALAGUETA 100G","UN 1"],["7117","PIMENTA MALAGUETA KG","KG 1"],["27167","PIMENTA ORNAMENTAL PT","UN 1"],["36267","PIMENTA SCORPION 100G","UN 1"],["26752","PIMENTA SWEET PALERMO 250G","UN 1"],["14780","PIMENTAO AMARELO BLOCK 150G","UN 1"],["7119","PIMENTAO AMARELO KG","KG 1"],["7121","PIMENTAO BEGE/CREME KG","KG 1"],["11258","PIMENTAO LARANJA KG","KG 1"],["21456","PIMENTAO MISTO SWEET PALERMO 250G","UN 1"],["7200","PIMENTAO ORGANICO BJ VERDE","UN 1"],["30255","PIMENTAO REI 150G AMARELO","UN 1"],["30256","PIMENTAO REI 150G LARANJA","UN 1"],["30254","PIMENTAO REI 150G VERMELHO","UN 1"],["26020","PIMENTAO REI PALERMO 200G","UN 1"],["11223","PIMENTAO ROXO KG","KG 1"],["14778","PIMENTAO SWEET PALERMO 300G","UN 1"],["17771","PIMENTAO TREBESCHI 150G BLOCK AMAR","UN 1"],["17773","PIMENTAO TREBESCHI 150G BLOCK VERM","UN 1"],["22103","PIMENTAO TREBESCHI 150G MINI COLORIDO","UN 1"],["7123","PIMENTAO VERDE KG","KG 1"],["14781","PIMENTAO VERMELHO BLOCK 150G","UN 1"],["7126","PIMENTAO VERMELHO KG","KG 1"],["12201","PINHA KG","KG 1"],["7128","PINHAO KG","KG 1"],["10103","PITAYA AMARELA KG","KG 1"],["10104","PITAYA KG","KG 1"],["21972","PITAYA KG BRANCA","KG 1"],["32049","QUIABO 300G","UN 1"],["12806","QUIABO EMBALADO KG BJ","KG 1"],["6022","QUIABO KG","KG 1"],["36613","RAMBUTAN 500G BJ","UN 1"],["7132","REPOLHO ROXO KG","KG 1"],["7134","REPOLHO VERDE KG","KG 1"],["12206","ROMA BJ","UN 1"],["7135","ROMA KG","KG 1"],["26301","SALVIA PT","UN 1"],["22667","SEMENTE DE ROMA INATIVO","UN 1"],["7142","SERIGUELA KG","KG 1"],["13403","SERIGUELA UND BJ","UN 1"],["32015","TAMARILLO 300G","UN 1"],["32311","TAMARINDO BJ","UN 1"],["14145","TAMARINDO KG","KG 1"],["22619","TANGERINA BABY 700G BJ","UN 1"],["23260","TANGERINA IMPORTADA KG","KG 1"],["7144","TOMATE CAQUI KG","KG 1"],["14930","TOMATE CEREJA 300G RAMA","UN 1"],["30674","TOMATE CEREJA AMARELO KG","KG 1"],["11194","TOMATE CEREJA BJ","UN 1"],["37440","TOMATE CEREJA KG RAMA","KG 1"],["17769","TOMATE CEREJA TREBESCHI 200G RAMA","UN 1"],["18297","TOMATE CEREJA TREBESCHI 250G AMAREL","UN 1"],["24999","TOMATE CHOCOLATE TREBESCHI 600G","UN 1"],["14934","TOMATE COMO ANTIGAMENTE 600G","UN 1"],["37428","TOMATE COQUITEL KG","KG 1"],["11277","TOMATE GRAPE 300G","UN 1"],["21476","TOMATE GRAPE 300G + DOCE","UN 1"],["11142","TOMATE GRAPE 300G RED","UN 1"],["11197","TOMATE GRAPE DONA 150G","UN 1"],["12463","TOMATE GRAPE DONA 300G","UN 1"],["19469","TOMATE GRAPE DONA 800G","UN 1"],["26021","TOMATE GRAPE KG","KG 1"],["26100","TOMATE GRAPE KG AMARELO","KG 1"],["37432","TOMATE GRAPE KG CONFEITE","KG 1"],["23367","TOMATE GRAPE TREBESCHI 180G MEL","UN 1"],["23366","TOMATE GRAPE TREBESCHI 180G TURMA DA MONICA","UN 1"],["35172","TOMATE GRAPE TREBESCHI 250G MASTERCHEF","UN 1"],["25264","TOMATE GRAPE TREBESCHI 250G ORG","UN 1"],["25001","TOMATE HEIRLOON TREBESCHI 600G","UN 1"],["7404","TOMATE HOLANDES KG","KG 1"],["25000","TOMATE HOLANDES TREBESCHI 600G","UN 1"],["7147","TOMATE ITALIANO KG","KG 1"],["7143","TOMATE KG","KG 1"],["25266","TOMATE LONGA VID TREBESCHI 600G P/MOLHO","UN 1"],["25258","TOMATE LONGA VIDA TREBESCHI 600G","UN 1"],["25265","TOMATE LONGA VIDA TREBESCHI 600G COLORIDO","UN 1"],["39134","TOMATE MEDITERRANEO 500G","UN 1"],["38976","TOMATE MOMOTARO KG","KG 1"],["17610","TOMATE RAMA KG","KG 1"],["14933","TOMATE SALAD SENSATION 300G","UN 1"],["14931","TOMATE SWEET GRAPE 180G","UN 1"],["11274","TOMATE SWEET GRAPE 400G BAM","UN 1"],["14932","TOMATE SWEET GRAPE 500G","UN 1"],["13671","TOMATE SWEET GRAPE KG","KG 1"],["17770","TOMATE SWEET GRAPE TREBESCHI 180G","UN 1"],["18296","TOMATE SWEET GRAPE TREBESCHI 500G","UN 1"],["17764","TOMATE TREBESCHI 1KG ITALIANO","UN 1"],["24998","TOMATE TREBESCHI 250G CONFEITE","UN 1"],["18298","TOMATE TREBESCHI 250G DUO","UN 1"],["37431","TOMATE TREBESCHI 2KG CAQUI","UN 1"],["17766","TOMATE TREBESCHI 400G ITALIANO PREMIUM","UN 1"],["17768","TOMATE TREBESCHI 600G CAQUI","UN 1"],["21742","TOMATE TREBESCHI 600G ITALIANO ESTUFA","UN 1"],["23981","TOMATE TREBESCHI 600G ITALIANO ORG","UN 1"],["17767","TOMATE TREBESCHI 700G SELECIONADOS","UN 1"],["18441","TOMATE TREBESCHI 800G PIZZADORO","UN 1"],["26302","TOMILHO PT","UN 1"],["7406","UVA BENITAKA 500G BJ","UN 1"],["7408","UVA BENITAKA KG","KG 1"],["23296","UVA BENITAKA KG PREMIUM","KG 1"],["11238","UVA BRASIL KG","KG 1"],["35126","UVA CANDY DREAMS 500G BJ","UN 1"],["35575","UVA CANDY SNAP 500G BJ CEREJA","UN 1"],["35650","UVA CHERRY CHUSH 500G BJ","UN 1"],["18596","UVA COTTON CANDY 500G BJ","UN 1"],["37542","UVA COTTON CANDY KG","KG 1"],["7409","UVA CRINSON 500G BJ","UN 1"],["26314","UVA CRINSON KG","KG 1"],["7412","UVA ITALIA KG","KG 1"],["7415","UVA MOSCATEL 500G BJ","UN 1"],["7418","UVA MOSCATINHO 500G BJ","UN 1"],["37864","UVA NIAGARA 1,4KG BJ","UN 1"],["7424","UVA NIAGARA 500G BJ","UN 1"],["23259","UVA NIAGARA KG","KG 1"],["30769","UVA PILARMOSCATO 500G VERDE","UN 1"],["38360","UVA PILARMOSCATO KG","KG 1"],["7430","UVA RED GLOBER KG","KG 1"],["17557","UVA SAFIRA 500G BJ","UN 1"],["7432","UVA THOMPSON 500G BJ","UN 1"],["7434","UVA THOMPSON 500G BLACK BJ","UN 1"],["17504","UVA THOMPSON KG","KG 1"],["7437","UVA VITORIA 500G BJ","UN 1"],["30385","UVA VITORIA KG","KG 1"],["32052","VAGEM AMERICANA 200G","UN 1"],["6023","VAGEM AMERICANA KG BJ","KG 1"],["32053","VAGEM COMUM 300G","UN 1"],["6024","VAGEM EMBALADA KG BJ","KG 1"],["6026","VAGEM KG","KG 1"]]},{"aba":"FOLHAGENS E ORGÂNICOS","estrutura":"ESTRUTURA MERCADOLÓGICA: FOLHAGENS E ORGÂNICOS","itens":[["26167","ABACATE ORGANICO PCT","UN 1"],["23896","ABACAXI PERBONI UND ORGANICO","UN 1"],["23805","ABOBORA 350G PICADA ORGANICA","UN 1"],["11176","ABOBORA BRASILEIRA ORGANICA BJ","UN 1"],["36709","ABOBORA ITALIA 350G PICADA HIGIENIZADO","UN 1"],["10656","ABOBORA ITALIA MERCADO ORG BJ","UN 1"],["7155","ABOBORA ITALIA ORGANICA UND","UN 1"],["22755","ABOBORA ITALIA SITIO SAMAMBAIA 500G","UN 1"],["23132","ABOBORA JAPONESA KG ORGANICA","KG 1"],["18609","ABOBORA JAPONESA ORGANICA UND","UN 1"],["24441","ABOBORA ORGANICA 700G","UN 1"],["32463","ACAFRAO MALUNGA 200G ORGANICO","UN 1"],["11195","ACELGA HORTE E CIA","UN 1"],["7157","ACELGA ORGANICA UND","UN 1"],["22756","ACELGA SITIO SAMAMBAIA UND","UN 1"],["11840","ACELGA TANAKA 170G HIGIENIZADA","UN 1"],["6780","ACELGA TANAKA UND","UN 1"],["11166","AGRIAO HORTA E CIA","UN 1"],["25696","AGRIAO MALUNGA UND ORGANICO","UN 1"],["24078","AGRIAO SITIO SAMAMBAIA UND","UN 1"],["11841","AGRIAO TANAKA 170G HIGIENIZADO","UN 1"],["6784","AGRIAO TANAKA UND HIDROP","UN 1"],["7438","ALCACHOFRA UND","UN 1"],["6786","ALECRIM TANAKA UND","UN 1"],["11251","ALECRIM UND","UN 1"],["33494","ALFACE AMERICANA AP UND BJ","UN 1"],["7159","ALFACE AMERICANA MALUNGA 250G ORGANICA","UN 1"],["7162","ALFACE AMERICANA MALUNGA UND ORGANICA","UN 1"],["11114","ALFACE AMERICANA MERCADO ORG","UN 1"],["22758","ALFACE AMERICANA ORGANICA UND","UN 1"],["13133","ALFACE AMERICANA TANAKA 170G HIGIENIZADA","UN 1"],["6790","ALFACE AMERICANA TANAKA UND BOLA","UN 1"],["6704","ALFACE BABY LIFE UND","UN 1"],["21142","ALFACE BABY SALADA VIVA UND","UN 1"],["6794","ALFACE BICOLOR HIDROP TANAKA UND","UN 1"],["6797","ALFACE CRESPA HIDROP TANAKA UND","UN 1"],["14679","ALFACE CRESPA HORTA E CIA UND","UN 1"],["7164","ALFACE CRESPA MALUNGA UND ORGANICA","UN 1"],["11104","ALFACE CRESPA MERCADO ORG","UN 1"],["22759","ALFACE CRESPA ORGANICA UND","UN 1"],["29391","ALFACE CRESPA ROXA ORGANICA INATIVO","UN 1"],["7178","ALFACE CRESPA ROXA ORGANICA UND","UN 1"],["6966","ALFACE CRESPA SEMPRE VERDE UND","UN 1"],["11842","ALFACE CRESPA TANAKA 170G HIGIENIZADA","UN 1"],["31492","ALFACE CROCANTE HIDROP YOSHIDA UND","UN 1"],["22760","ALFACE CROCANTE UND ORGANICA","UN 1"],["22757","ALFACE FRISEE SITIO SAMAMBAIA 200G ROXA","UN 1"],["22761","ALFACE FRISEE SITIO SAMAMBAIA UND","UN 1"],["6801","ALFACE GREEN FRIZZLY TANAKA UND","UN 1"],["6803","ALFACE LISA HIDROP TANAKA UND","UN 1"],["7169","ALFACE LISA MALUNGA UND ORGANICA","UN 1"],["11172","ALFACE LISA ORG MERCADO ORG","UN 1"],["22961","ALFACE LISA SITIO SAMAMBAIA UND","UN 1"],["11843","ALFACE LISA TANAKA 170G HIGIENIZADA","UN 1"],["6809","ALFACE LOLLO SANGUINE TANAKA UND","UN 1"],["6813","ALFACE MIMOSA HIDROP TANAKA UND","UN 1"],["7172","ALFACE MIMOSA MALUNGA UND","UN 1"],["7174","ALFACE MIMOSA MALUNGA UND ORGANICA","UN 1"],["6975","ALFACE MIMOSA SEMPRE VERDE UND","UN 1"],["24603","ALFACE MIMOSA SITIO SAMAMB UND ROXA","UN 1"],["33726","ALFACE MINI FRISEE UND MIX","UN 1"],["22958","ALFACE MINI LISA ROXA SITIO SAMAMBAIA UND","UN 1"],["36681","ALFACE MINI LISA UND VERDE ORGANICA","UN 1"],["7176","ALFACE MINI ROMANA ORGANICA UND","UN 1"],["6817","ALFACE MINI ROMANA TANAKA UND","UN 1"],["6709","ALFACE MINI ROMANA UND","UN 1"],["23967","ALFACE ORGANICA MIMOSA VERDE UND","UN 1"],["6818","ALFACE RED FRIZZLY TANAKA UND","UN 1"],["6823","ALFACE ROMANA HIDROP TANAKA UND","UN 1"],["31796","ALFACE ROMANA TENDITA UND ORGANICA","UN 1"],["31795","ALFACE ROMANA TUDELA UND ORGANICA","UN 1"],["6824","ALFACE ROXA HIDROP TANAKA UND","UN 1"],["11147","ALFACE ROXA HORTE E CIA","UN 1"],["6980","ALFACE ROXA SEMPRE VERDE UND","UN 1"],["31495","ALFACE ROXO YOSHIDA UND","UN 1"],["22762","ALFACE RUBINEL SITIO SAMAMBAIA UND","UN 1"],["33482","ALFACE SALANOVA 180G MINI SALANOVA","UN 1"],["25610","ALFACE SALANOVA ORG UND FRISEE VERDE","UN 1"],["25692","ALFACE SALANOVA ORGANICA UND FRISEE ROXA","UN 1"],["25721","ALFACE SNACK MALUNGA UND ORGANICO","UN 1"],["26095","ALHO MALUNGA 150G ORGANICO","UN 1"],["31929","ALHO PORO KANO 200G","UN 1"],["25697","ALHO PORO ORGANICO UND","UN 1"],["24084","ALHO PORO SITIO SAMAMBAIA 350G","UN 1"],["25543","ALHO PORO TANAKA UND","UN 1"],["6711","ALHO PORO UND","UN 1"],["6988","ALMEIRAO SEMPRE VERDE UND","UN 1"],["11844","ALMEIRAO TANAKA 170G HIGIENIZADO","UN 1"],["6827","ALMEIRAO TANAKA UND","UN 1"],["23885","AMEIXA PERBONI 500G ORGANICA","UN 1"],["16980","AMEIXA PURA FRUTA 500G ORGANICOS","UN 1"],["24970","ASPARGO IMPORTADO 450G BRANCO","UN 1"],["6724","ASPARGO NATU FRESH UND VERDE","UN 1"],["23217","ASPARGO UND VERDE BJ","UN 1"],["24971","ASPARGO VERDE 250G","UN 1"],["38476","AVOCADO MALUNGA 500G ORGANICO","UN 1"],["37765","BANANA MACA KG ORG","KG 1"],["37766","BANANA NANICA KG ORG","KG 1"],["37764","BANANA PRATA KG ORG","KG 1"],["26168","BANANA PRATA ORGANICA 600G","UN 1"],["22946","BANANA PRATA PERBONI 600G ORGANICA","UN 1"],["24390","BATATA DOCE BRANCA SITIO SAMAM 500G","UN 1"],["7180","BATATA DOCE ORGANICA BJ","UN 1"],["33727","BATATA DOCE ROXA 600G","UN 1"],["24271","BATATA DOCE ROXA PERBONI 500G ORG","UN 1"],["26446","BATATA INGLESA ORGANICA BJ","UN 1"],["23893","BERINJELA ITALIANA PERBONI 600G ORGANICA","UN 1"],["35288","BERINJELA ORGANICA 400G RAJADA","UN 1"],["25698","BERINJELA ORGANICA BJ","UN 1"],["25262","BERINJELA TREBESCHI 500G ORGANICA","UN 1"],["6830","BERTALHA TANAKA UND","UN 1"],["7181","BETERRABA ORGANICA BJ","UN 1"],["35124","BETERRABA ORGANICO 500G ARCO IRIS","UN 1"],["22763","BETERRABA SITIO SAMAMBAIA 500G","UN 1"],["24112","BROCOLIS AME ANDRADE HORTIF UND","UN 1"],["5990","BROCOLIS AMERICANO KG","KG 1"],["21717","BROCOLIS AP 260G TURMA DO NINJA FLORETE","UN 1"],["21741","BROCOLIS AP NINJA 250G","UN 1"],["18608","BROCOLIS JAPONES 400G ORGANICO INATIVO","UN 1"],["25724","BROCOLIS JAPONES ORGANICO 300G","UN 1"],["25695","BROCOLIS MALUNGA 300G ORGANICO","UN 1"],["32029","BROCOLIS NINJA TANAKA 300G","UN 1"],["23254","BROCOLIS NINJA UND","UN 1"],["32292","BROCOLIS NINJA/COUVE FLOR AP 300G","UN 1"],["22764","BROCOLIS SITIO SAMAMBAIA 350G","UN 1"],["11313","BROTO DE FEIJAO MOIASHI 250G","UN 1"],["11314","BROTO DE FEIJAO REI DOS BROTOS 500G","UN 1"],["11316","BROTO GIRASSOL REI DOS BROTOS 100G","UN 1"],["11315","BROTO LENTILHA REI DOS BROTOS 200G","UN 1"],["11318","BROTO REI DOS BROTOS 100G DE ALFAFA","UN 1"],["11317","BROTO REI DOS BROTOS 100G TREVO E RABANETE","UN 1"],["11319","BROTO REI DOS BROTOS 150G DE ALFAFA","UN 1"],["11320","BROTO REI DOS BROTOS 200G DE ALFAFA","UN 1"],["11338","BROTO REI DOS BROTOS 200G TRIGO","UN 1"],["38477","CAQUI MALUNGA 500G RAMA FORTE ORGANICO","UN 1"],["7183","CEBOLA ORGANICA BJ","UN 1"],["23135","CEBOLA PERBONI 500G ORGANICA","UN 1"],["23889","CEBOLA ROXA ORGANICA BJ","UN 1"],["6831","CEBOLINHA HIDROP TANAKA UND","UN 1"],["11191","CEBOLINHA MERCADO ORG","UN 1"],["7184","CEBOLINHA PICADA UND ORGANICA","UN 1"],["6832","CEBOLINHA TANAKA UND","UN 1"],["22765","CEBOLINHA UND ORGANICA","UN 1"],["25717","CENOURA MALUNGA 150G TIRAS ORGANICA","UN 1"],["12486","CENOURA ORGANICA BJ","UN 1"],["22766","CENOURA SITIO SAMAMBAIA 500G","UN 1"],["25693","CENOURETE ORGANICA 200G","UN 1"],["11128","CHEIRO VERDE ORG UND COENTRO/CEBOL","UN 1"],["25716","CHEIRO VERDE ORGANICO 50G PICADO","UN 1"],["14678","CHEIRO VERDE PRODUCAO UN","UN 1"],["25694","CHUCHU MALUNGA 600G ORGANICO","UN 1"],["10666","CHUCHU ORGANICO BJ","UN 1"],["7019","COENTRO CEBOLINHA SEMPRE VERDE UND","UN 1"],["6835","COENTRO E CEBOLINHA HIDROP TANAKA UND","UN 1"],["6839","COENTRO HIDROP TANAKA UND","UN 1"],["31633","COENTRO HIDROP YOSHIDA UND","UN 1"],["12487","COENTRO MALUNGA UND ORGANICO","UN 1"],["22767","COENTRO ORGANICO UND","UN 1"],["6840","COENTRO TANAKA UND","UN 1"],["22943","COGUMELO SHIMEJI 200G ORGANICO","UN 1"],["6793","COGUMELO TAKOISH 200G SHITAKE","UN 1"],["24916","COUVE 350G","UN 1"],["29233","COUVE BROCOLIS MALUNGA UND ORGANICO","UN 1"],["6844","COUVE BROCOLIS TANAKA UND","UN 1"],["6795","COUVE DE BRUXELAS 200G","UN 1"],["21765","COUVE FLOR AP UND BJ","UN 1"],["12620","COUVE FLOR KG","KG 1"],["25718","COUVE FLOR MALUNGA 150G ORGANICO","UN 1"],["25699","COUVE FLOR MALUNGA 350G ORGANICO","UN 1"],["22507","COUVE FLOR PERBONI UND","UN 1"],["7100","COUVE FLOR UND","UN 1"],["22769","COUVE FLOR UND ORGANICA","UN 1"],["25612","COUVE KALE SITIO SAMAMBAIA 300G","UN 1"],["25613","COUVE KALE SITIO SAMAMBAIA 300G ROXA","UN 1"],["7190","COUVE MANTEIGA MALUNGA UND ORGANICO","UN 1"],["22768","COUVE MANTEIGA ORGANICA UND","UN 1"],["7138","COUVE MANTEIGA PICADA TANAKA 180G","UN 1"],["12624","COUVE PICADA KG","KG 1"],["25723","COUVE PICADA ORGANICA 150G","UN 1"],["31501","COUVE PICADA SEMPRE VERDE UND","UN 1"],["22754","COUVE PICADA UND","UN 1"],["6846","COUVE TANAKA UND","UN 1"],["6826","ENDIVIA BRANCA BJ","UN 1"],["12503","ENDIVIA BRANCA KG","KG 1"],["6829","ENDIVIA ROXA BJ","UN 1"],["11255","ERVA DOCE TANAKA UND","UN 1"],["25700","ERVILHA MALUNGA 200G ORGANICO","UN 1"],["11193","ERVILHA TORTA MERCADO ORG 250G","UN 1"],["12745","ESCAROLA TANAKA 170G HIGIENIZADA","UN 1"],["6851","ESCAROLA TANAKA UND","UN 1"],["7192","ESPINAFRE MALUNGA UND ORGANICO","UN 1"],["10812","ESPINAFRE MERCADO ORG UND","UN 1"],["37377","ESPINAFRE NOVA ZELANDIA 200G ORGANICO","UN 1"],["22770","ESPINAFRE SITIO SAMAMBAIA 200G","UN 1"],["12482","ESPINAFRE TANAKA 170G HIGIENIZADA","UN 1"],["6853","ESPINAFRE TANAKA UND","UN 1"],["6843","FOLHA DE LOURO FRESCA UND","UN 1"],["19072","FOLHA DE LOURO TANAKA UND","UN 1"],["28962","HORTELA MALUNGA 50G ORGANICO","UN 1"],["7193","HORTELA ORGANICO UND","UN 1"],["22771","HORTELA SITIO SAMAMBAIA 100G","UN 1"],["6857","HORTELA TANAKA UND","UN 1"],["11203","INHAME MERCADO ORG 500G","UN 1"],["11899","INHAME ORGANICO 500G","UN 1"],["23891","KIWI PERBONI 500G ORGANICO","UN 1"],["26169","LIMAO MALUNGA 500G ORGANICO","UN 1"],["22944","MACA ORGANICA 400G","UN 1"],["23894","MAMAO FORMOSA PERBONI KG ORGANICO","KG 1"],["25725","MANDIOCA ORGANICA 600G","UN 1"],["26747","MANDIOCA ROSA MALUNGA 600G ORGANICA","UN 1"],["25702","MANDIOQUINHA ORGANICA 400G","UN 1"],["34023","MANGA PALMER 500G ORGANICA","UN 1"],["26170","MANGA PALMER MALUNGA 600G ORGANICO","UN 1"],["26297","MANJERICAO ITALIANO PT","UN 1"],["7198","MANJERICAO MALUNGA UND ORGANICO","UN 1"],["23026","MANJERICAO ROXO SITIO SAMAMBAIA UND","UN 1"],["11212","MANJERICAO ROXO UND","UN 1"],["7154","MANJERICAO SEMPRE VERDE UND","UN 1"],["6859","MANJERICAO TANAKA UND","UN 1"],["12811","MANJERICAO UND PRODUCAO","UN 1"],["6862","MANJERONA TANAKA UND","UN 1"],["26171","MARACUJA MALUNGA 600G ORGANICO","UN 1"],["13095","MASTRUZ UND","UN 1"],["18823","MAXIXE MERCADO ORG 500G","UN 1"],["23138","MELAO AMARELO KG ORGANICO","KG 1"],["23895","MELAO AMARELO PERBONI KG ORGANICO","KG 1"],["7199","MILHO VERDE ORGANICO BJ","UN 1"],["25263","MINI BERINJELA TREBESCHI 200G ORGAN","UN 1"],["25722","MINI PIMENTAO MALUNGA 150G ORGANICO","UN 1"],["21505","MINI PIMENTAO ORGANICO BJ","UN 1"],["25948","MORANGO ORGANICO 250G","UN 1"],["22416","MORANGO ORGANICO BJ","UN 1"],["22947","MORANGO PERBONI 250G ORGANICO","UN 1"],["6869","MOSTARDA TANAKA UND","UN 1"],["6872","NABO COMPRIDO TANAKA UND","UN 1"],["11208","NABO UND","UN 1"],["16981","NECTARINA PURA FRUTA 500G ORGANIC","UN 1"],["24008","OREGANO SITIO SAMAMBAIA UND","UN 1"],["6875","OREGANO TANAKA UND","UN 1"],["11232","OREGANO UND","UN 1"],["21657","PEPINO CAIPIRA 500G ORG","UN 1"],["11160","PEPINO JAPONES MERCADO ORG","UN 1"],["25703","PEPINO JAPONES ORGANICO BJ","UN 1"],["34271","PEPINO SNACK ORGANICO BJ","UN 1"],["22941","PERA PERBONI 450G ORGANICA","UN 1"],["37054","PIMENTA DE CHEIRO 100G ORGANICO","UN 1"],["26172","PIMENTA DE CHEIRO ORGANICA 120G","UN 1"],["25704","PIMENTAO AMARELO MALUNGA 400G ORGANICO","UN 1"],["21976","PIMENTAO COLORIDO MERCADO ORG 250G","UN 1"],["25705","PIMENTAO ORGANICO 400G COLORIDO","UN 1"],["23892","PIMENTAO PALERMO PERBONI 500G","UN 1"],["25259","PIMENTAO TREBESCHI 350G ORGANICO","UN 1"],["11170","PIMENTAO VERDE MERCADO ORG 300G","UN 1"],["25706","PIMENTAO VERMELHO MALUNGA 400G ORGANICO","UN 1"],["7201","QUIABO MALUNGA 300G","UN 1"],["25707","QUIABO MALUNGA 300G ORGANICO","UN 1"],["11157","QUIABO ORGANICO 300G","UN 1"],["24161","QUIABO PERBONI 300G ORGANICO","UN 1"],["7202","RABANETE ORGANICO BJ","UN 1"],["6877","RABANETE TANAKA BJ","UN 1"],["16235","RABANETE TANAKA KG","KG 1"],["12966","RADICHIO KG","KG 1"],["17021","RADICHIO TANAKA UND","UN 1"],["7130","RADICHIO UND","UN 1"],["25708","REPOLHO ORGANICO 400G VERDE","UN 1"],["25709","REPOLHO ORGANICO BJ ROXO","UN 1"],["22655","REPOLHO VERDE MERCADO ORG 500G","UN 1"],["23073","REPOLHO VERDE SITIO SAMAMBAIA 500G","UN 1"],["6882","RUCULA HIDROP TANAKA UND","UN 1"],["28887","RUCULA MALUNGA 180G ORGANICA","UN 1"],["6888","RUCULA MINI HIDROP TANAKA UND","UN 1"],["22772","RUCULA ORGANICA UND","UN 1"],["7041","RUCULA SEMPRE VERDE UND","UN 1"],["11849","RUCULA TANAKA 170G HIGIENIZADA","UN 1"],["7203","RUCULA UND ORGANICA","UN 1"],["25729","SALADA ORGANICA 180G 2 AMORES","UN 1"],["25719","SALADA ORGANICA 180G 3 AMORES","UN 1"],["25720","SALADA ORGANICA 180G 4 AMORES","UN 1"],["25713","SALADA ORGANICA 180G CANDANGA","UN 1"],["25715","SALADA ORGANICA 180G CRISTINA","UN 1"],["25714","SALADA ORGANICA 180G PRIMAVERA","UN 1"],["7044","SALSA CEBOLINHA SEMPRE VERDE UND","UN 1"],["11231","SALSA CRESPA UND","UN 1"],["6898","SALSA E CEBOLINHA HIDROP TANAKA UND","UN 1"],["7187","SALSA E CEBOLINHA ORGANICA UND","UN 1"],["32224","SALSA E CEBOLINHA UND ORGANICA","UN 1"],["6903","SALSA HIDROP TANAKA UND","UN 1"],["31493","SALSA HIDROP YOSHIDA UND","UN 1"],["11162","SALSA HORTA E CIA","UN 1"],["25810","SALSA MALUNGA 50G PICADO ORGANICO","UN 1"],["7205","SALSA MALUNGA UND ORGANICA","UN 1"],["22773","SALSA SITIO SAMAMBAIA UND ORG","UN 1"],["6907","SALSA TANAKA UND","UN 1"],["31930","SALSAO KANO 300G","UN 1"],["7136","SALSAO UND","UN 1"],["21140","SALSINHA SALADA VIVA UND","UN 1"],["6914","SALVIA TANAKA UND","UN 1"],["10844","SALVIA UND","UN 1"],["6933","TAIOBA TANAKA UND","UN 1"],["12766","TAIOBA UND","UN 1"],["26173","TANGERINA PONKAN MALUNGA 1KG ORGANICA","UN 1"],["25726","TOMATE CEREJA MALUNGA 250G ORGANICO","UN 1"],["34011","TOMATE CEREJA RAMA 350G ORG","UN 1"],["30048","TOMATE GRAPE AMARELO 300G ORGANICO","UN 1"],["30049","TOMATE GRAPE LARANJA 270G ORGANICO","UN 1"],["24406","TOMATE GRAPE ORGANICO BJ","UN 1"],["24109","TOMATE GRAPE PERBONI 180G ORGANICO","UN 1"],["7207","TOMATE ITALIANO MALUNGA 500G","UN 1"],["10821","TOMATE ITALIANO MERCADO ORG 500G","UN 1"],["25710","TOMATE ITALIANO ORGANICO 500G","UN 1"],["22945","TOMATE ITALIANO PERBONI 500G ORGANICO","UN 1"],["25727","TOMATE PERA MALUNGA 250G ORGANICO","UN 1"],["7210","TOMATE SALADA ORGANICO 500G","UN 1"],["23133","TOMATE SALADA PERBONI 500G ORGANICO","UN 1"],["27491","TOMATE SALADETE ORGANICO 500G","UN 1"],["7216","TOMATE SWEET GRAPE ORGANICO 180G","UN 1"],["11108","TOMATE SWEET GRAPE ORGANICO 250G","UN 1"],["24305","TOMATE UVA PERBONI 200G ORGANICO","UN 1"],["12658","TOMILHO KG","KG 1"],["6923","TOMILHO TANAKA UND","UN 1"],["6929","TRIO 1 TANAKA AGRIAO ALFACE CRESPA E RUCULA","UN 1"],["31589","TRIO 1 YOSHIDA UND","UN 1"],["23887","UVA NIAGARA PERBONI 500G ORGANICA","UN 1"],["25728","VAGEM MALUNGA 300G EXTRA FINA ORGANICA","UN 1"],["25711","VAGEM MALUNGA 300G ORGANICA","UN 1"],["18821","VAGEM ORGANICA 300G","UN 1"],["23888","VAGEM PERBONI 300G ORGANICA","UN 1"]]},{"aba":"MANIPULADOS","estrutura":"ESTRUTURA MERCADOLÓGICA: MANIPULADOS","itens":[["17556","ABACAXI DESCASCADO 700G BJ","UN 1"],["34179","ABACAXI PEROLA KG EM CUBOS","KG 1"],["11156","ABOBORA C/BROCOLIS KG","KG 1"],["35705","ABOBORA C/BROCOLIS KG ESPECIAL","KG 1"],["35706","ABOBORA C/CENOURA KG ESPECIAL","KG 1"],["35686","ABOBORA C/CHUCHU KG ESPECIAL","KG 1"],["11177","ABOBORA C/COUVE FLOR KG","KG 1"],["35687","ABOBORA C/COUVE FLOR KG ESPECIAL","KG 1"],["35688","ABOBORA C/QUIABO KG ESPECIAL","KG 1"],["11146","ABOBORA JAPONESA 300G PICADA","UN 1"],["26527","AGUA DE COCO DONA NATURAL 1L","UN 1"],["11812","AGUA DE COCO DONA NATURAL 500ML","UN 1"],["39047","ALHO ALHO E CIA 1KG DESCASCADO HIGIENIZADO","UN 1"],["11113","ALHO ALHO E CIA 250G DESCASCADO","UN 1"],["36918","ALHO ALHO E CIA 500G DESCASCADO HIGIENIZADO","UN 1"],["33164","ALHO NENA 500G DESCASCADO","UN 1"],["11132","ALHO PORO PICADO KG","KG 1"],["12633","BATATA BAROA KG DESCACADA","KG 1"],["11121","BATATA BOLINHA EMBALADA KG","KG 1"],["11207","BETERRABA C/CENOURA RALADA KG","KG 1"],["35691","BROCOLIS C/CENOURA KG ESPECIAL","KG 1"],["10661","BROCOLIS EMBALADO 300G ORGANICO","UN 1"],["35692","CENOURA C/CHUCHU KG ESPECIAL","KG 1"],["35693","CENOURA C/COUVE FLOR KG ESPECIAL","KG 1"],["35694","CENOURA C/VAGEM KG ESPECIAL","KG 1"],["35696","CENOURA KG DESCASCADA ESPECIAL","KG 1"],["10472","CENOURA LINHA FACIL KG DESCASCADA","KG 1"],["11110","COCO SECO KG PARTIDO C/CASCA","KG 1"],["11083","COUVE FLOR C/BROCOLIS KG","KG 1"],["35699","COUVE FLOR C/BROCOLIS KG ESPECIAL","KG 1"],["35709","COUVE FLOR HIGIENIZADA KG ESPECIAL","KG 1"],["11112","COUVE HIGIENIZADA KG","KG 1"],["11173","COUVE PICADA PRODUCAO","UN 1"],["36919","FEIJAO VERDE 500G HIGIENIZADO","UN 1"],["7148","FEIJAO VERDE DEBULHADO KG","KG 1"],["35708","FEIJAO VERDE DEBULHADO KG ESPECIAL","KG 1"],["11179","FLOR COMESTIVEL BJ","UN 1"],["34216","FOUNDE KIT FLV KG KIWI/MORANGO","KG 1"],["34215","FOUNDE KIT FLV KG MOR/UVA VIT/KIWI","KG 1"],["34213","FOUNDE KIT FLV KG UVA THOMP/MORANGO","KG 1"],["11084","FRUTAS MISTAS KG","KG 1"],["35700","INGRED P/ARROZ KG ESPECIAL COLORIDO","KG 1"],["28351","INGRED P/FEIJOADA KG","KG 1"],["11086","INGREDIENTES P/VINAGRETE KG","KG 1"],["11222","JURUBEBA BJ","UN 1"],["38120","JURUBEBA UND","UN 1"],["35701","KIT LEGUMES KG ESPECIAL","KG 1"],["11111","KIT PARA YAKISSOBA KG","KG 1"],["35702","KIT PARA YAKISSOBA KG ESPECIAL","KG 1"],["11148","KIT RALADO KG","KG 1"],["11131","KIT SOPINHA KG","KG 1"],["35703","KIT SOPINHA KG ESPECIAL","KG 1"],["26789","LARANJA PERA KG PRODUCAO","KG 1"],["11102","LEGUMES SELECIONADOS KG","KG 1"],["35704","LEGUMES SELECIONADOS KG ESPECIAL","KG 1"],["11116","MAMAO C/MANGA KG","KG 1"],["11158","MELANCIA DECORADA KG","KG 1"],["11123","MELAO C/MANGA KG","KG 1"],["17603","MELAO ORANGE KG FAT","KG 1"],["11125","MELAO PICADO KG","KG 1"],["34197","MIX DE FRUTAS KG ABACATE/MAMAO PAPAYA","KG 1"],["34195","MIX DE FRUTAS KG KIWI/MANGA TOMMY","KG 1"],["11266","PEPINO JAPONES EMBALADO KG","KG 1"],["10482","PIMENTAO AMARELO LINHA FACIL KG","KG 1"],["11229","PIMENTAO COLORIDO EMBALADO KG","KG 1"],["10486","PIMENTAO VERDE LINHA FACIL KG","KG 1"],["10490","PIMENTAO VERMELHO LINHA FACIL KG","KG 1"],["12582","SALADA DE FRUTA DA CASA KG","KG 1"],["22730","SALADA DE FRUTA DA CASA KG I","KG 1"],["22731","SALADA DE FRUTA DA CASA KG II","KG 1"],["22732","SALADA DE FRUTA DA CASA KG III","KG 1"],["11081","SALADA ESTACAO KG","KG 1"],["22897","SALADA ESTACAO KG FAMILIA","KG 1"],["11099","SALADA MISTA KG","KG 1"],["22899","SALADA MISTA KG FAMILIA","KG 1"],["12619","SALADA NAPOLITANA KG","KG 1"],["14191","SALADA ORIENTAL KG","KG 1"],["11092","SALADA PRIMAVERA KG","KG 1"],["22896","SALADA PRIMAVERA KG FAMILIA","KG 1"],["11124","SALADA TROPICAL KG","KG 1"],["11079","SALADA VERAO KG","KG 1"],["22898","SALADA VERAO KG FAMILIA","KG 1"],["22733","SALADA VERDE KG GOURMET INATIVO","KG 1"],["11097","SALADA VERDE KG TRAD","KG 1"],["17138","SALADA VERDE MISTA KG","KG 1"],["11178","SALSAO EMBALADO KG","KG 1"],["35707","SELETA DE LEGUMES KG ESPECIAL","KG 1"],["28853","SUCO DONA NATURAL 1L LARANJA","UN 1"],["11813","SUCO DONA NATURAL 500ML ACAI/BANANA","UN 1"],["18492","SUCO DONA NATURAL 500ML DETOX","UN 1"],["11811","SUCO DONA NATURAL 500ML LARANJA","UN 1"],["21300","SUCO DONA NATURAL 500ML MARACUJA","UN 1"],["21301","SUCO DONA NATURAL 500ML MELANCIA C/GENGIBRE","UN 1"],["26185","TOMATE KG RODELA INATIVO","KG 1"]]},{"aba":"OVOS","estrutura":"ESTRUTURA MERCADOLÓGICA: OVOS","itens":[["21654","OVOS 12X1 GRANDE BRANCO","UN 1"],["3434","OVOS 12X1 GRANDE VERMELHO","UN 1"],["21649","OVOS 20X1 BRANCO EXTRA","UN 1"],["29292","OVOS 20X1 VERMELHO","UN 1"],["21655","OVOS 30X1 BRANCO","UN 1"],["3420","OVOS 30X1 CODORNA","UN 1"],["3430","OVOS 30X1 VERMELHO","UN 1"],["8393","OVOS ANA MARIA BRAGA 10X1","UN 1"],["8399","OVOS CAIPIRA ORGANICO 6X1","UN 1"],["37265","OVOS CONFINS DE MINAS 20X1 CAIPIRA","UN 1"],["26837","OVOS DC 12X1 BRANCO","UN 1"],["17486","OVOS GRANJA DO CERRADO 10X1 TIPO CAIPIRA","UN 1"],["29015","OVOS GRANJA DO CERRADO 20X1 TIPO CAIPIRA","UN 1"],["10154","OVOS JOSIDITH 30X1 GRANDE BRANCO PVC","UN 1"],["8409","OVOS LABEL ROUGE 06X1 OMEGA 3","UN 1"],["8414","OVOS LABEL ROUGE 10X1 CAIPIRA","UN 1"],["25682","OVOS LABEL ROUGE 10X1 CAIPIRA DO CAMPO","UN 1"],["32291","OVOS LABEL ROUGE 10X1 CAIPIRA ORG SHOW DA LUNA","UN 1"],["20539","OVOS LABEL ROUGE 10X1 CAIPIRA SHOW DA LUNA","UN 1"],["16634","OVOS LABEL ROUGE 10X1 MASTERCHEF CAIPIRA","UN 1"],["8418","OVOS LABEL ROUGE 10X1 OMEGA 3","UN 1"],["8420","OVOS LABEL ROUGE 10X1 ORGANICO","UN 1"],["26270","OVOS LABEL ROUGE 12X1 CAIPIRA DO CAMPO","UN 1"],["37502","OVOS LABEL ROUGE 15X1 PRO TEINE CAIPIRA","UN 1"],["19727","OVOS LABEL ROUGE 20X1 CAIPIRA","UN 1"],["25683","OVOS LABEL ROUGE 20X1 CAIPIRA DO CAMPO","UN 1"],["25681","OVOS LABEL ROUGE 20X1 CAIPIRA ORGANICO","UN 1"],["31951","OVOS LABEL ROUGE 20X1 MASTERCHEF CAIPIRA","UN 1"],["31950","OVOS LABEL ROUGE 20X1 OMEGA 3","UN 1"],["33505","OVOS LABEL ROUGE 30X1 CAIPIRA","UN 1"],["8423","OVOS LABEL ROUGE 6X1 C/SELENIO","UN 1"],["8428","OVOS LABEL ROUGE 6X1 CAIPIRA","UN 1"],["26791","OVOS LOYOLA 10X1 GRANDE CAIPIRA","UN 1"],["34141","OVOS LOYOLA 10X1 LIVRES DE GAIOLAS VERMELHO","UN 1"],["21648","OVOS LOYOLA 10X1 TIPO CAIPIRA VERM","UN 1"],["21650","OVOS LOYOLA 12X1 GRANDE VERMELHO","UN 1"],["34944","OVOS LOYOLA 20X1 LIVRES DE GAIOLAS VERMELHO","UN 1"],["21653","OVOS LOYOLA 30X1 CODORNA","UN 1"],["21656","OVOS LOYOLA 30X1 GRANDE VERM","UN 1"],["21652","OVOS LOYOLA 60X1 GRANDE BRANCO ENVOLTORIO","UN 1"],["3438","OVOS PRIMAVERA 30X1 PRODUCAO","UN 1"]]}];
+const LOGO = "data:image/png;base64,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0fTKK68M5VPWX5c+r7feejFh2Am0VQi5bt/+9rejM35vFzDhrbfeGpMJzRMljRdG9syjjz46pPZwSy699NLSgVPmYostlt91111tUTb69p3vfKfULcUsYtPf/e53LV2nKiFEA57Bhz/84dL4s7j0ccyYMfnDDz8cZbUDnRBC/eWpmDlvpbApJJOAJgXbZUAa0ba9SqnsWDOzlS0JYqwTtguJoLH96uKLL85GjRoV63NlSIOQPfjgg9l+++0Xa5naOBA8M3369Gz//fePdcxmJIaJtSbraolZ++7WB31LzBn9akZikNgK9/Wvf31Y2wUTs8XWOetx73//+1vS7c4774y1O2trg6HbrAjttoXQhTf1v6zPnrOG+8Mf/rByXbVOtHXDoE4SPnvzpkyZEoPZLliUtycyWY3YZ1olEITP/sRf//rXg2ImjJ6sYCyk+7kZFt/33HPPtm4KSBY4S/Fs6eK5NllctlFguPRdcMEFY4E+WfS+OzND2TfccEP2jW98o5b9wd0AWl1xxRXZn/70p+BNdLVXt4xX8EZy9WMjSbvRViEsQHseeOCBoU3bKYi02iqrrJIdddRRsSulCskFy1JsGDtJWsFAsH4nnXRSKeMZvI022ig2YbcTBNxma9awmWG0MbmWoXxG4m2g2+mnnx6buTFoGViPU089NbvooosGpN2sBnxH+Iw762ZHzM4775ztsssulR5AcvNjJ1O70REhRADbuw477LBg5sFYoOECQTfffPPYfsRVLANmwkiYt8y6FfAcl+SRRx4pfS7FabGVjMvYThAKW/De+973Vmrt8847L6x1K1QJFxD0tdZaK7bHoVvZs+qx9XDixInZ1KlTW9JuVoOx5I0Zc/xI2aS4M9txxx1DIMv6+9JLL2U33nhj213SjgghIMI111yTff/7329rpxBzjjnmiCMpiy66aN/dGWEQMNP3vve9lhqdZdHeqmfmm2++sFCtmLsucEXFhlVam3X/6U9/2lIwWik/fcCMe+21V8S4VXsnlU+hYmCW4pVgEfUbfezx1X403GSTTcIN58VsuOGGpeGEvv385z8PXmknOiaECCEe49pxC1oxRB1w3nDLLbesjNUI4k9+8pPK+Eb7tLOVC73xxhvHecdOAOPYyE3wy6whxfaLX/xi0PFameJQLuvO0tlsXhaDAoV6zz33ZBMmTIhQo4o+swoI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";
+const KEY = "quebra-flv-v1";
+const PAGE = 120;
+
+// índice de produtos
+const KEY_EXTRA = "quebra-flv-extras-v1";
+let extras = [];
+try { extras = JSON.parse(localStorage.getItem(KEY_EXTRA) || "[]") || []; } catch (e) { extras = []; }
+function salvarExtras() { try { localStorage.setItem(KEY_EXTRA, JSON.stringify(extras)); } catch (e) {} }
+let PRODUTOS = [];
+function montarProdutos() {
+  PRODUTOS = [];
+  ABAS.forEach((a, s) => a.itens.forEach(([cod, nome, emb]) => {
+    PRODUTOS.push({ s, cod, nome, emb, k: s + ":" + cod, busca: norm(nome + " " + cod) });
+  }));
+  extras.forEach(x => PRODUTOS.push({ s: x.s, cod: x.cod, nome: x.nome, emb: x.emb, k: x.s + ":" + x.cod, busca: norm(x.nome + " " + x.cod), meu: true }));
+  PRODUTOS.sort((a, b) => a.s - b.s || a.nome.localeCompare(b.nome, "pt-BR"));
+}
+// itens de uma aba (originais + cadastrados), em ordem alfabética, para o PDF
+function itensDaAba(s) {
+  return PRODUTOS.filter(p => p.s === s).map(p => [p.cod, p.nome, p.emb]);
+}
+const curto = ["Alho, frutas e legumes", "Folhagens e orgânicos", "Manipulados", "Ovos"];
+montarProdutos();
+
+function norm(t) { return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase(); }
+
+let qtd = {};
+try { qtd = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { qtd = {}; }
+function salvar() { try { localStorage.setItem(KEY, JSON.stringify(qtd)); } catch (e) {} }
+
+let filtro = "todos"; // todos | lancados | 0..3
+let limite = PAGE;
+const $ = id => document.getElementById(id);
+
+document.getElementById("hoje").textContent = new Date().toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
+
+function chips() {
+  const n = Object.keys(qtd).length;
+  const ops = [["todos", "Todos"], ["lancados", "Lançados", n], ...curto.map((c, i) => [String(i), c])];
+  $("chips").innerHTML = ops.map(([v, t, c]) =>
+    `<button class="chip" type="button" data-f="${v}" aria-pressed="${filtro === v}">${t}${c !== undefined ? `<span class="n">${c}</span>` : ""}</button>`).join("");
+}
+
+let foco = null, lidoAtual = null; // produto mostrado após leitura do código de barras
+function filtrados() {
+  if (foco) { const p = PRODUTOS.find(x => x.k === foco); if (p) return [p]; foco = null; }
+  const termos = norm($("q").value.trim()).split(/\s+/).filter(Boolean);
+  return PRODUTOS.filter(p => {
+    if (filtro === "lancados" && !(p.k in qtd)) return false;
+    if (/^\d$/.test(filtro) && p.s !== +filtro) return false;
+    return termos.every(t => p.busca.includes(t));
+  });
+}
+
+function somar(v) { return String(v || "").split("+").reduce((s, x) => { const n = parseFloat(x.replace(",", ".")); return s + (isFinite(n) ? n : 0); }, 0); }
+function fmt(n) { return String(Math.round(n * 1000) / 1000).replace(".", ","); }
+function esc(t) { return t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function render() {
+  const lista = filtrados();
+  const mostra = lista.slice(0, limite);
+  $("lista").innerHTML = mostra.map(p => {
+    const v = qtd[p.k] || "";
+    const u = p.emb.split(" ")[0];
+    return `<li class="row${v ? " has" : ""}" data-k="${p.k}">
+      <div><div class="pname">${esc(p.nome)}</div>
+      <div class="pmeta"><span>Cód. ${p.cod}</span><span>·</span><span>${esc(p.emb)}</span><span class="tag">${curto[p.s]}</span>${p.meu ? `<span class="tag meu">Cadastrado</span><button class="rm" type="button" data-rm="${p.k}">Excluir</button>` : ""}</div></div>
+      <div class="qty"><button class="plus" type="button" aria-label="Somar mais uma quantidade">+</button><input type="text" inputmode="decimal" enterkeyhint="done" id="q_${p.s}_${p.cod}" value="${esc(v)}" placeholder="0" aria-label="Quantidade de ${esc(p.nome)}"><span class="u">${u}</span><small class="soma" hidden></small></div>
+    </li>`;
+  }).join("");
+  $("lista").hidden = !mostra.length;
+  $("mais").hidden = lista.length <= limite;
+  $("mais").textContent = `Mostrar mais (${lista.length - limite} restantes)`;
+  const vazio = $("vazio");
+  if (!mostra.length) {
+    vazio.hidden = false;
+    vazio.innerHTML = filtro === "lancados" && !$("q").value
+      ? "<b>Nenhuma quebra lançada ainda</b>Busque um produto e digite a quantidade ao lado."
+      : `<b>Nenhum produto encontrado</b>Tente parte do nome (ex.: “banana prata”) ou o código. Se o produto não estiver na relação, cadastre ele.<button class="add" type="button" data-novo="1"><span>+</span> Cadastrar “${esc($("q").value.trim())}”</button>`;
+  } else vazio.hidden = true;
+  $("abrirNovo").hidden = !mostra.length;
+  $("info").textContent = `${lista.length} produto${lista.length === 1 ? "" : "s"}`;
+  $("info2").textContent = filtro === "todos" ? "4 abas" : (filtro === "lancados" ? "com quantidade" : curto[+filtro]);
+  $("limparBusca").hidden = !$("q").value;
+  $("lido").hidden = !(foco && lidoAtual);
+  if (foco && lidoAtual) $("lidoCod").textContent = lidoAtual;
+  totais();
+}
+
+function totais() {
+  const n = Object.keys(qtd).length;
+  $("total").textContent = n;
+  $("totalTxt").textContent = n === 1 ? "item lançado" : "itens lançados";
+  const c = document.querySelector('.chip[data-f="lancados"] .n'); if (c) c.textContent = n;
+}
+
+let t;
+$("q").addEventListener("input", () => { foco = null; clearTimeout(t); t = setTimeout(() => { limite = PAGE; render(); window.scrollTo(0, 0); }, 120); });
+$("q").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); const v = $("q").value.trim(); if (/^\d{8,14}$/.test(v) && !PRODUTOS.some(p => p.cod === v)) { tratarCodigo(v); return; } const i = document.querySelector("#lista input"); if (i) i.focus(); }
+});
+$("limparBusca").addEventListener("click", () => { foco = null; $("q").value = ""; limite = PAGE; render(); $("q").focus(); });
+$("chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  filtro = b.dataset.f; foco = null; limite = PAGE; chips(); render();
+});
+$("mais").addEventListener("click", () => { limite += PAGE; render(); });
+
+// ---- cadastro de produto fora da lista ----
+$("nAba").innerHTML = curto.map((c, i) => `<option value="${i}">${c}</option>`).join("");
+function novoMsg(m) { $("novoMsg").hidden = !m; $("novoMsg").textContent = m || ""; }
+function abrirNovo() {
+  pendente = null;
+  const q = $("q").value.trim();
+  $("formNovo").reset(); novoMsg("");
+  if (/^\d+$/.test(q)) $("nCod").value = q; else if (q) $("nNome").value = q.toUpperCase();
+  $("nAba").value = /^\d$/.test(filtro) ? filtro : "0";
+  if (/\bKG\b/i.test(q)) $("nEmb").value = "KG 1";
+  $("novo").hidden = false;
+  ($("nCod").value ? $("nNome") : $("nCod")).focus();
+}
+$("abrirNovo").addEventListener("click", abrirNovo);
+$("vazio").addEventListener("click", e => { if (e.target.closest("[data-novo]")) abrirNovo(); });
+$("fecharNovo").addEventListener("click", () => { $("novo").hidden = true; pendente = null; });
+$("formNovo").addEventListener("input", () => novoMsg(""));
+$("novo").addEventListener("click", e => { if (e.target.id === "novo") $("novo").hidden = true; });
+$("nNome").addEventListener("input", e => {
+  const el = e.target, pos = el.selectionStart; el.value = el.value.toUpperCase(); try { el.setSelectionRange(pos, pos); } catch (_) {}
+  if (/\bUND?\b/.test(el.value)) $("nEmb").value = "UN 1"; else if (/\bKG\b/.test(el.value)) $("nEmb").value = "KG 1";
+});
+$("nCod").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, ""); });
+$("nQtd").addEventListener("input", e => { e.target.value = e.target.value.replace(/[^\d.,]/g, "").replace(".", ","); });
+$("formNovo").addEventListener("submit", e => {
+  e.preventDefault();
+  const cod = $("nCod").value.trim(), nome = $("nNome").value.trim().replace(/\s+/g, " ");
+  const emb = $("nEmb").value, s = +$("nAba").value, q = $("nQtd").value.replace(/,$/, "");
+  if (!cod) { novoMsg("Digite o código do produto."); $("nCod").focus(); return; }
+  if (!nome) { novoMsg("Digite o nome do produto."); $("nNome").focus(); return; }
+  const ja = PRODUTOS.find(p => p.cod === cod);
+  if (ja) { novoMsg(`O código ${cod} já está na lista: ${ja.nome} (${curto[ja.s]}). Busque por ele.`); return; }
+  extras.push({ cod, nome, emb, s }); salvarExtras();
+  if (q && parseFloat(q.replace(",", ".")) > 0) { qtd[s + ":" + cod] = q; salvar(); }
+  montarProdutos();
+  $("novo").hidden = true;
+  if (pendente) { ligar(pendente, s + ":" + cod); mostrarProduto(s + ":" + cod, pendente); pendente = null; toast("Produto cadastrado e ligado ao código"); }
+  else { $("q").value = cod; foco = null; filtro = "todos"; limite = PAGE; chips(); render(); toast("Produto cadastrado"); }
+  if (!q) { const i = document.querySelector("#lista input"); if (i) i.focus(); }
+});
+$("lista").addEventListener("click", e => {
+  const b = e.target.closest("[data-rm]"); if (!b) return;
+  if (b.dataset.ok !== "1") { b.dataset.ok = "1"; b.textContent = "Toque de novo para excluir"; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ""; b.textContent = "Excluir"; } }, 3000); return; }
+  const k = b.dataset.rm;
+  extras = extras.filter(x => x.s + ":" + x.cod !== k); salvarExtras();
+  Object.keys(codigos).forEach(c => { if (codigos[c] === k) delete codigos[c]; }); salvarCodigos();
+  delete qtd[k]; salvar();
+  montarProdutos(); chips(); render(); toast("Produto excluído");
+});
+
+$("lista").addEventListener("input", e => {
+  const inp = e.target; if (inp.tagName !== "INPUT") return;
+  const li = inp.closest("li"); const k = li.dataset.k;
+  let v = inp.value.replace(/\./g, ",").replace(/[^\d,+]/g, "").replace(/\+{2,}/g, "+").replace(/^\+/, "");
+  if (v !== inp.value) inp.value = v;
+  const total = somar(v);
+  if (total > 0) qtd[k] = fmt(total); else delete qtd[k];
+  const sm = li.querySelector(".soma");
+  if (v.includes("+") && total > 0) { sm.hidden = false; sm.textContent = "= " + fmt(total); } else sm.hidden = true;
+  li.classList.toggle("has", k in qtd);
+  salvar(); totais();
+});
+$("lista").addEventListener("pointerdown", e => { if (e.target.closest(".plus")) e.preventDefault(); });
+$("lista").addEventListener("click", e => {
+  const b = e.target.closest(".plus"); if (!b) return;
+  const inp = b.parentElement.querySelector("input");
+  if (inp.value && !inp.value.endsWith("+")) inp.value += "+";
+  inp.focus(); const n = inp.value.length; try { inp.setSelectionRange(n, n); } catch (_) {}
+});
+$("lista").addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" && e.key === "Enter") {
+    e.preventDefault(); e.target.blur();
+    if ($("q").value) { $("q").focus(); $("q").select(); }
+  }
+});
+$("lista").addEventListener("focusout", e => {
+  const inp = e.target; if (inp.tagName !== "INPUT") return;
+  const li = inp.closest("li"), k = li.dataset.k;
+  inp.value = k in qtd ? qtd[k] : "";
+  li.querySelector(".soma").hidden = true;
+});
+
+// ---- painel de impressão ----
+function toast(m) { const el = $("toast"); el.textContent = m; el.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => el.hidden = true, 2600); }
+function msg(m, err) { const el = $("pdfMsg"); el.hidden = !m; el.textContent = m || ""; el.classList.toggle("err", !!err); }
+$("abrirPdf").addEventListener("click", () => {
+  msg(""); $("confirmaLimpar").hidden = true; $("zonaLimpar").hidden = false;
+  const n = Object.keys(qtd).length;
+  if (!n) { $("modoCompleto").checked = true; msg("Ainda não há quantidades lançadas. Você pode baixar a planilha em branco."); }
+  if (!$("dataPdf").value) { const d = new Date(); $("dataPdf").value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+  try { const tp = localStorage.getItem("quebra-flv-tipo"); if (tp) $("tipo").value = tp; } catch (e) {}
+  $("sheet").hidden = false; $("baixar").focus();
+});
+$("fechar").addEventListener("click", () => $("sheet").hidden = true);
+$("sheet").addEventListener("click", e => { if (e.target.id === "sheet") $("sheet").hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { ["sheet", "novo", "vinc", "falha"].forEach(id => $(id).hidden = true); if (rodando || !$("cam").hidden) fecharCamera(); } });
+$("limpar").addEventListener("click", () => { $("zonaLimpar").hidden = true; $("confirmaLimpar").hidden = false; });
+$("naoLimpar").addEventListener("click", () => { $("zonaLimpar").hidden = false; $("confirmaLimpar").hidden = true; });
+$("simLimpar").addEventListener("click", () => {
+  qtd = {}; salvar(); $("sheet").hidden = true; chips(); render(); toast("Lançamentos zerados");
+});
+
+function gerarPDF(modo, tipo, dataBR) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const L = 13, W = 184, top = 21.3, rowH = 4.15;
+  const cw = [25, 65, 10, 84];
+  // todas as estruturas numa tabela só, separadas por uma linha de título (economiza papel)
+  const corpo = [], usadas = [];
+  ABAS.forEach((aba, s) => {
+    const linhas = itensDaAba(s)
+      .filter(([cod]) => modo === "completo" || (s + ":" + cod) in qtd)
+      .map(([cod, nome, emb]) => [cod, nome, emb, qtd[s + ":" + cod] || ""]);
+    if (!linhas.length) return;
+    usadas.push(aba.estrutura.replace(/^ESTRUTURA MERCADOLÓGICA:\s*/i, ""));
+    corpo.push([{ content: aba.estrutura, colSpan: 4, styles: { fillColor: [217, 217, 217], fontStyle: "bold", halign: "left" } }]);
+    corpo.push(...linhas);
+  });
+  if (!corpo.length) return null;
+  const cabecalho = ["DONA MERCADO, HORTIFRUTI & ADEGA", "DEPARTAMENTO DE PREVENÇÃO DE PERDAS", "PLANILHA PADRÃO PARA LANÇAMENTOS DE " + tipo, "SETOR: HORTIFRUTI",
+    "ESTRUTURA MERCADOLÓGICA: " + usadas.join(" / "), "DATA: " + dataBR];
+  doc.setFont("helvetica", "bold"); doc.setTextColor(0);
+  const limite = 2 * ((L + cw[0] + cw[1] + cw[2] + 43) - (L + W / 2)); // linha comprida não passa por cima do logo
+  cabecalho.forEach((txt, i) => {
+    let fs = 9.5; doc.setFontSize(fs);
+    while (doc.getTextWidth(txt) > limite && fs > 6) { fs -= 0.25; doc.setFontSize(fs); }
+    doc.text(txt, L + W / 2, top + i * rowH + rowH * 0.72, { align: "center" });
+  });
+  try { doc.addImage(LOGO, "PNG", L + cw[0] + cw[1] + cw[2] + 45, top + rowH + 1.6, 29.5, 10.8); } catch (e) {}
+  doc.autoTable({
+    startY: top + 6 * rowH,
+    margin: { left: L, right: L, top: 15, bottom: 15 },
+    tableWidth: W,
+    head: [["Código Produto", "Produto", "Emb", "Quantidade"]],
+    body: corpo,
+    showHead: "everyPage",
+    theme: "grid",
+    styles: { font: "helvetica", fontSize: 8, textColor: 0, lineColor: 0, lineWidth: 0.15, cellPadding: { top: 0.7, bottom: 0.7, left: 1, right: 1 }, minCellHeight: rowH, valign: "middle", overflow: "ellipsize" },
+    headStyles: { fillColor: [191, 191, 191], textColor: 0, fontStyle: "bold", halign: "center" },
+    columnStyles: { 0: { cellWidth: cw[0], halign: "center" }, 1: { cellWidth: cw[1] }, 2: { cellWidth: cw[2] }, 3: { cellWidth: cw[3], fontStyle: "bold" } }
+  });
+  // numeração quando passar de uma folha
+  const n = doc.getNumberOfPages();
+  if (n > 1) for (let pg = 1; pg <= n; pg++) { doc.setPage(pg); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.text(`Folha ${pg} de ${n}`, L + W, 291, { align: "right" }); }
+  return doc;
+}
+
+function preparar() {
+  const modo = document.querySelector('input[name="modo"]:checked').value;
+  const tipo = $("tipo").value, iso = $("dataPdf").value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) { msg("Escolha a data do lançamento.", true); $("dataPdf").focus(); return null; }
+  const [aa, mm, dd] = iso.split("-");
+  try { localStorage.setItem("quebra-flv-tipo", tipo); } catch (e) {}
+  const temItens = modo === "completo" || Object.keys(qtd).length > 0;
+  if (!temItens) { msg("Nenhum item com quantidade. Escolha “Planilha completa” ou lance alguma quebra.", true); return null; }
+  return { modo, tipo, dataBR: `${dd}/${mm}/${aa}`, nome: `${$("tipo").selectedOptions[0].text.normalize("NFD").replace(/[\u0300-\u036f]/g, "")} FLV ${dd}-${mm}-${aa}.pdf` };
+}
+function fazerPDF(p) {
+  if (!window.jspdf) { msg("O gerador de PDF não carregou. Abra o app de novo com internet uma vez.", true); return null; }
+  return gerarPDF(p.modo, p.tipo, p.dataBR);
+}
+// impressão direta: monta a planilha em HTML no mesmo layout e chama a impressão do celular
+function montarImpressao(p) {
+  const secoes = [], usadas = [];
+  ABAS.forEach((aba, s) => {
+    const linhas = itensDaAba(s).filter(([cod]) => p.modo === "completo" || (s + ":" + cod) in qtd);
+    if (!linhas.length) return;
+    usadas.push(aba.estrutura.replace(/^ESTRUTURA MERCADOLÓGICA:\s*/i, ""));
+    secoes.push(`<tr class="sec"><td colspan="4">${esc(aba.estrutura)}</td></tr>` + linhas.map(([cod, nome, emb]) =>
+      `<tr><td class="c">${cod}</td><td>${esc(nome)}</td><td>${esc(emb)}</td><td class="q">${esc(qtd[s + ":" + cod] || "")}</td></tr>`).join(""));
+  });
+  const cab = ["DONA MERCADO, HORTIFRUTI & ADEGA", "DEPARTAMENTO DE PREVENÇÃO DE PERDAS", "PLANILHA PADRÃO PARA LANÇAMENTOS DE " + p.tipo, "SETOR: HORTIFRUTI",
+    "ESTRUTURA MERCADOLÓGICA: " + usadas.join(" / "), "DATA: " + p.dataBR];
+  const tam = t => t.length > 74 ? "6.3pt" : t.length > 62 ? "7.3pt" : t.length > 52 ? "8.4pt" : "9.5pt";
+  $("print").innerHTML = `<div class="ph"><img src="${LOGO}" alt="">${cab.map(t => `<div style="font-size:${tam(t)}">${esc(t)}</div>`).join("")}</div>
+    <table class="pt"><colgroup><col style="width:13.6%"><col style="width:35.3%"><col style="width:5.4%"><col style="width:45.7%"></colgroup>
+    <thead><tr><th>Código Produto</th><th>Produto</th><th>Emb</th><th>Quantidade</th></tr></thead><tbody>${secoes.join("")}</tbody></table>`;
+}
+$("imprimir").addEventListener("click", () => {
+  const p = preparar(); if (!p) return;
+  montarImpressao(p); msg("");
+  const t0 = document.title; document.title = p.nome.replace(/\.pdf$/, "");
+  setTimeout(() => { window.print(); document.title = t0; }, 50);
+});
+function baixarBlob(blob, nome) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+}
+$("baixar").addEventListener("click", () => {
+  const p = preparar(); if (!p) return;
+  const doc = fazerPDF(p); if (!doc) return;
+  baixarBlob(doc.output("blob"), p.nome);
+  $("sheet").hidden = true; toast("PDF salvo em Downloads");
+});
+(function () { try { const f = new File(["x"], "x.pdf", { type: "application/pdf" }); if (navigator.canShare && navigator.canShare({ files: [f] })) $("compartilhar").hidden = false; } catch (e) {} })();
+$("compartilhar").addEventListener("click", async () => {
+  const p = preparar(); if (!p) return;
+  const doc = fazerPDF(p); if (!doc) return;
+  const file = new File([doc.output("blob")], p.nome, { type: "application/pdf" });
+  try { await navigator.share({ files: [file], title: p.nome }); $("sheet").hidden = true; }
+  catch (e) { if (e && e.name !== "AbortError") msg("Não deu para compartilhar. Use “Baixar PDF”.", true); }
+});
+// backup
+$("exportar").addEventListener("click", () => {
+  const d = new Date(), dd = String(d.getDate()).padStart(2, "0"), mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dados = { app: "quebra-flv", versao: 1, salvoEm: d.toISOString(), lancamentos: qtd, produtos: extras, codigos };
+  baixarBlob(new Blob([JSON.stringify(dados, null, 1)], { type: "application/json" }), `backup-quebra-flv-${dd}-${mm}-${d.getFullYear()}.json`);
+  toast("Backup salvo em Downloads");
+});
+$("importar").addEventListener("change", async () => {
+  const f = $("importar").files && $("importar").files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (!d || d.app !== "quebra-flv") throw new Error("arquivo");
+    let np = 0, nc = 0, nl = 0;
+    (d.produtos || []).forEach(x => { if (x && x.cod && x.nome && !extras.some(e => e.s === x.s && e.cod === x.cod) && !PRODUTOS.some(p => p.cod === x.cod)) { extras.push({ cod: String(x.cod), nome: String(x.nome), emb: x.emb === "UN 1" ? "UN 1" : "KG 1", s: +x.s || 0 }); np++; } });
+    salvarExtras(); montarProdutos();
+    Object.entries(d.codigos || {}).forEach(([c, k]) => { if (PRODUTOS.some(p => p.k === k)) { codigos[c] = k; nc++; } }); salvarCodigos();
+    Object.entries(d.lancamentos || {}).forEach(([k, v]) => { if (PRODUTOS.some(p => p.k === k) && somar(v) > 0) { qtd[k] = fmt(somar(v)); nl++; } }); salvar();
+    $("sheet").hidden = true; chips(); render();
+    toast(`Importado: ${nl} lançamentos, ${np} produtos, ${nc} códigos`);
+  } catch (e) { msg("Esse arquivo não é um backup do Quebra FLV.", true); }
+  $("importar").value = "";
+});
+
+// ---- leitura de código de barras (foto) ----
+const KEY_COD = "quebra-flv-codigos-v1";
+let codigos = {};
+try { codigos = JSON.parse(localStorage.getItem(KEY_COD) || "{}") || {}; } catch (e) { codigos = {}; }
+function salvarCodigos() { try { localStorage.setItem(KEY_COD, JSON.stringify(codigos)); } catch (e) {} }
+let pendente = null; // código lido esperando ser ligado a um produto
+
+// Etiqueta de balança (EAN-13 começando com 2): 2 + código da balança (5) + 0 + preço/peso (5) + dígito.
+// Guarda só o começo, assim o mesmo produto é reconhecido com qualquer peso.
+function chaveDe(cod) { return /^2\d{12}$/.test(cod) ? cod.slice(0, 7) : cod; }
+function tipoDe(cod) {
+  if (/^2\d{12}$/.test(cod)) return `Etiqueta da balança · produto ${cod.slice(1, 6)} · R$ ${(+cod.slice(7, 12) / 100).toFixed(2).replace(".", ",")}`;
+  if (/^\d{13}$/.test(cod)) return "EAN do fornecedor";
+  return "";
+}
+function ligar(cod, k) { codigos[chaveDe(cod)] = k; salvarCodigos(); }
+function mostrarProduto(k, cod) {
+  const p = PRODUTOS.find(x => x.k === k); if (!p) return;
+  foco = k; lidoAtual = cod; filtro = "todos"; limite = PAGE;
+  $("q").value = p.nome; chips(); render(); window.scrollTo(0, 0);
+  const i = document.querySelector("#lista input"); if (i) setTimeout(() => {
+    if (qtd[k]) { i.value = qtd[k] + "+"; toast("Já tinha " + qtd[k] + " " + p.emb.split(" ")[0] + ". Digite o novo peso para somar."); }
+    i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (_) {}
+  }, 60);
+}
+function tratarCodigo(cod) {
+  cod = String(cod).replace(/\D/g, "");
+  if (!cod) return;
+  const k = codigos[chaveDe(cod)];
+  if (k && PRODUTOS.some(p => p.k === k)) { mostrarProduto(k, cod); toast("Produto encontrado"); return; }
+  // o próprio código interno digitado/lido
+  const direto = PRODUTOS.find(p => p.cod === cod);
+  if (direto) { mostrarProduto(direto.k, cod); return; }
+  abrirVinculo(cod, false);
+}
+
+function abrirVinculo(cod, troca) {
+  pendente = cod;
+  $("vincTitle").textContent = troca ? "Trocar produto" : "Código novo";
+  $("vTxt").textContent = troca ? "Escolha o produto certo para esse código." : "Esse código ainda não está ligado a nenhum produto. Escolha qual é: nas próximas leituras ele já aparece direto.";
+  $("vCod").textContent = cod; $("vTipo").textContent = tipoDe(cod);
+  $("vBusca").value = ""; listaVinculo();
+  $("vinc").hidden = false; setTimeout(() => $("vBusca").focus(), 60);
+}
+function listaVinculo() {
+  const termos = norm($("vBusca").value.trim()).split(/\s+/).filter(Boolean);
+  const r = termos.length ? PRODUTOS.filter(p => termos.every(t => p.busca.includes(t))).slice(0, 40) : [];
+  $("vLista").innerHTML = r.length
+    ? r.map(p => `<li><button type="button" data-k="${p.k}"><b>${esc(p.nome)}</b><small>Cód. ${p.cod} · ${esc(p.emb)} · ${curto[p.s]}</small></button></li>`).join("")
+    : `<li><button type="button" disabled><small>${termos.length ? "Nenhum produto encontrado. Use “Não está na lista”." : "Digite parte do nome, ex.: mamao formosa"}</small></button></li>`;
+}
+$("vBusca").addEventListener("input", listaVinculo);
+$("vLista").addEventListener("click", e => {
+  const b = e.target.closest("button[data-k]"); if (!b || !pendente) return;
+  ligar(pendente, b.dataset.k); $("vinc").hidden = true;
+  mostrarProduto(b.dataset.k, pendente); pendente = null; toast("Código ligado ao produto");
+});
+$("vFechar").addEventListener("click", () => { $("vinc").hidden = true; pendente = null; });
+$("vinc").addEventListener("click", e => { if (e.target.id === "vinc") { $("vinc").hidden = true; pendente = null; } });
+$("vNovo").addEventListener("click", () => {
+  const cod = pendente; const nome = $("vBusca").value.trim();
+  $("vinc").hidden = true; $("q").value = nome; foco = null; abrirNovo(); pendente = cod;
+  if (!nome) $("nCod").focus();
+});
+$("trocar").addEventListener("click", () => { if (lidoAtual) abrirVinculo(lidoAtual, true); });
+
+// leitor: 1) BarcodeDetector do celular (Android/Chrome), 2) zbar (WebAssembly) carregado na primeira leitura
+let zbarPromise = null;
+function carregarZbar() {
+  if (window.zbarWasm) return Promise.resolve(window.zbarWasm);
+  if (!zbarPromise) zbarPromise = new Promise((ok, erro) => {
+    const s = document.createElement("script");
+    s.src = "vendor/zbar-wasm.js";
+    s.onload = () => window.zbarWasm ? ok(window.zbarWasm) : erro(new Error("zbar"));
+    s.onerror = () => { zbarPromise = null; erro(new Error("zbar")); };
+    document.head.appendChild(s);
+  });
+  return zbarPromise;
+}
+function valido(c) {
+  if (!/^\d{8,14}$/.test(c)) return false;
+  if ([8, 12, 13].includes(c.length)) { // confere o dígito verificador (EAN/UPC)
+    const d = c.split("").map(Number), dv = d.pop();
+    const soma = d.reverse().reduce((s, x, i) => s + x * (i % 2 ? 1 : 3), 0);
+    return (10 - soma % 10) % 10 === dv;
+  }
+  return true;
+}
+let zxingPromise = null;
+function carregarZxing() {
+  if (window.ZXing) return Promise.resolve(window.ZXing);
+  if (!zxingPromise) zxingPromise = new Promise((ok, erro) => {
+    const s = document.createElement("script");
+    s.src = "vendor/zxing.min.js";
+    s.onload = () => window.ZXing ? ok(window.ZXing) : erro(new Error("zxing"));
+    s.onerror = () => { zxingPromise = null; erro(new Error("zxing")); };
+    document.head.appendChild(s);
+  });
+  return zxingPromise;
+}
+function desenhar(bmp, max, rot) {
+  const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const w = Math.round(bmp.width * s), h = Math.round(bmp.height * s);
+  const cv = document.createElement("canvas");
+  if (rot % 180) { cv.width = h; cv.height = w; } else { cv.width = w; cv.height = h; }
+  const g = cv.getContext("2d", { willReadFrequently: true });
+  g.translate(cv.width / 2, cv.height / 2); g.rotate(rot * Math.PI / 180); g.drawImage(bmp, -w / 2, -h / 2, w, h);
+  return cv;
+}
+const espera = () => new Promise(r => setTimeout(r, 0));
+let diag = "";
+async function lerFoto(file) {
+  const passos = [];
+  const bmp = await createImageBitmap(file);
+  // 1) leitor do próprio celular
+  if ("BarcodeDetector" in window) {
+    try {
+      const det = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] });
+      const r = await det.detect(bmp);
+      const c = r.map(x => x.rawValue).find(valido); if (c) return c;
+      passos.push("celular: não achou");
+    } catch (e) { passos.push("celular: indisponível"); }
+  } else passos.push("celular: não tem");
+  // 2) zbar
+  try {
+    const zbar = await carregarZbar();
+    for (const max of [3000, 1800, 1100]) {
+      const cv = desenhar(bmp, max, 0);
+      const r = await zbar.scanImageData(cv.getContext("2d").getImageData(0, 0, cv.width, cv.height));
+      const c = r.map(x => x.decode()).find(valido); if (c) return c;
+      if (max >= Math.max(bmp.width, bmp.height)) break;
+    }
+    passos.push("zbar: não achou");
+  } catch (e) { passos.push("zbar: bloqueado"); }
+  // 3) ZXing (JavaScript puro), girando a foto
+  try {
+    const Z = await carregarZxing();
+    const hints = new Map();
+    hints.set(Z.DecodeHintType.TRY_HARDER, true);
+    hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.CODE_128]);
+    const reader = new Z.MultiFormatReader(); reader.setHints(hints);
+    for (const max of [1400, 2200, 900]) for (const rot of [0, 90, 180, 270]) {
+      await espera();
+      const cv = desenhar(bmp, max, rot);
+      for (const B of [Z.HybridBinarizer, Z.GlobalHistogramBinarizer]) {
+        try { const c = reader.decode(new Z.BinaryBitmap(new B(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText(); if (valido(c)) return c; } catch (e) {}
+      }
+    }
+    passos.push("zxing: não achou");
+  } catch (e) { passos.push("zxing: bloqueado"); }
+  diag = passos.join(" · ");
+  return null;
+}
+let stream = null, rodando = false, detector = null, luz = false;
+function bip() {
+  try { const ac = new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.value = 1800; g.gain.value = 0.08; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.09); setTimeout(() => ac.close(), 300); } catch (e) {}
+}
+async function abrirCamera() {
+  $("foto").value = "";
+  $("cam").hidden = false; $("camMsg").textContent = "Abrindo a câmera…"; $("camLuz").hidden = true; luz = false;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $("camMsg").textContent = "Este navegador não libera a câmera ao vivo. Toque em “Usar foto”."; return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+  } catch (e) {
+    $("camMsg").textContent = "A câmera não foi liberada. Permita o acesso à câmera nas configurações do navegador, ou toque em “Usar foto”.";
+    return;
+  }
+  if ($("cam").hidden) { fecharCamera(); return; }
+  const v = $("video"); v.srcObject = stream;
+  try { await v.play(); } catch (e) {}
+  const track = stream.getVideoTracks()[0];
+  try { const cap = track.getCapabilities ? track.getCapabilities() : {}; if (cap.torch) $("camLuz").hidden = false;
+    if (cap.focusMode && cap.focusMode.includes("continuous")) track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {}); } catch (e) {}
+  detector = null;
+  if ("BarcodeDetector" in window) {
+    try { const sup = await BarcodeDetector.getSupportedFormats(); const f = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"].filter(x => sup.includes(x)); if (f.length) detector = new BarcodeDetector({ formats: f }); } catch (e) { detector = null; }
+  }
+  if (!detector) { try { await carregarZbar(); } catch (e) { $("camMsg").textContent = "Não deu para iniciar o leitor. Toque em “Usar foto”."; return; } }
+  $("camMsg").textContent = "Aponte para o código de barras";
+  rodando = true; varrer();
+}
+const quadro = document.createElement("canvas");
+async function varrer() {
+  if (!rodando) return;
+  const v = $("video");
+  if (v.readyState >= 2 && v.videoWidth) {
+    try {
+      let cod = null;
+      if (detector) { const r = await detector.detect(v); cod = r.map(x => x.rawValue).find(valido); }
+      else if (window.zbarWasm) {
+        const s = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight));
+        quadro.width = Math.round(v.videoWidth * s); quadro.height = Math.round(v.videoHeight * s);
+        const g = quadro.getContext("2d", { willReadFrequently: true }); g.drawImage(v, 0, 0, quadro.width, quadro.height);
+        const r = await zbarWasm.scanImageData(g.getImageData(0, 0, quadro.width, quadro.height));
+        cod = r.map(x => x.decode()).find(valido);
+      }
+      if (cod && rodando) { if (navigator.vibrate) navigator.vibrate(70); bip(); fecharCamera(); tratarCodigo(cod); return; }
+    } catch (e) {}
+  }
+  setTimeout(varrer, detector ? 90 : 160);
+}
+function fecharCamera() {
+  rodando = false;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null; $("video").srcObject = null; $("cam").hidden = true;
+}
+$("scan").addEventListener("click", abrirCamera);
+$("camFechar").addEventListener("click", fecharCamera);
+$("camLuz").addEventListener("click", async () => {
+  const track = stream && stream.getVideoTracks()[0]; if (!track) return;
+  luz = !luz; try { await track.applyConstraints({ advanced: [{ torch: luz }] }); } catch (e) { luz = false; }
+  $("camLuz").setAttribute("aria-pressed", String(luz));
+});
+document.addEventListener("visibilitychange", () => { if (document.hidden && rodando) fecharCamera(); });
+$("foto").addEventListener("change", async () => {
+  const f = $("foto").files && $("foto").files[0]; if (!f) return;
+  fecharCamera();
+  $("scan").classList.add("busy"); toast("Lendo código…");
+  let cod = null; diag = "";
+  try { cod = await lerFoto(f); } catch (e) { diag = "erro ao abrir a foto"; }
+  $("scan").classList.remove("busy"); $("toast").hidden = true;
+  if (cod) tratarCodigo(cod);
+  else { $("fCod").value = ""; $("diag").textContent = diag ? "Leitores: " + diag : ""; $("falha").hidden = false; }
+});
+$("fDenovo").addEventListener("click", () => { $("falha").hidden = true; abrirCamera(); });
+$("fFechar").addEventListener("click", () => $("falha").hidden = true);
+$("falha").addEventListener("click", e => { if (e.target.id === "falha") $("falha").hidden = true; });
+$("fCod").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, ""); });
+$("fDigitado").addEventListener("click", () => {
+  const c = $("fCod").value; if (!c) { $("fCod").focus(); return; }
+  $("falha").hidden = true; tratarCodigo(c);
+});
+
+chips(); render();
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
