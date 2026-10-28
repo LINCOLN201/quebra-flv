@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-app="1">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -171,6 +171,33 @@ nav.tabbar .wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bloc
 .panel{background:var(--surface);width:100%;max-width:560px;border-radius:24px 24px 0 0;padding:10px max(18px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));display:grid;gap:14px}
 .panel::before{content:"";justify-self:center;width:40px;height:4px;border-radius:999px;background:var(--line);margin-bottom:4px}
 .sheet .panel{max-height:94vh;max-height:94dvh;overflow-y:auto}
+html:not([data-app]) .so-app{display:none!important}
+.fhdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.fdata{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.fdata input{font-size:15px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--fg)}
+.fcard{border-radius:18px;padding:14px;display:grid;gap:12px;border:1.5px solid var(--line)}
+.fcard.av{background:var(--surface-2)}
+.fcard.ap{background:color-mix(in srgb,var(--d0) 9%,var(--surface));border-color:color-mix(in srgb,var(--d0) 35%,var(--line))}
+.fcard.vazio{opacity:.55}
+.fcard.vazio .fbtns,.fcard.vazio .flinks{display:none}
+.ftop{display:flex;align-items:center;gap:12px}
+.fsep{font-size:13px;color:var(--muted)}
+.fic{width:34px;height:34px;min-width:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--fg);color:var(--surface)}
+.fnum{font-family:var(--display);font-size:34px;line-height:1;min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.ftit{flex:1;min-width:0;display:grid}
+.ftit b{font-size:16.5px}
+.ftit small{color:var(--muted);font-size:12.5px}
+.fst{font-size:12.5px;font-weight:700;padding:5px 9px;border-radius:999px;white-space:nowrap;background:var(--chip);color:var(--muted)}
+.fst.ok{background:var(--accent-soft);color:var(--accent-ink)}
+.fbtns{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.fb{padding:15px 12px;font-size:15.5px;border-color:var(--line);background:var(--surface);color:var(--fg)}
+.fb.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.fb.benv,.fb.lider1{background:var(--d0);border-color:var(--d0);color:#fff}
+.flinks{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.lnk{border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:700;text-decoration:underline;cursor:pointer;padding:2px 0}
+.mais{border-top:1px solid var(--line);padding-top:10px}
+.mais summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--muted);padding:4px 0}
+.maisc{display:grid;gap:10px;margin-top:10px}
 .backup{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:12px}
 .backup>span{font-size:12.5px;color:var(--muted)}
 #print{display:none}
@@ -188,6 +215,7 @@ nav.tabbar .wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bloc
   .pt th{background:#bfbfbf!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .pt td.c{text-align:center}
   .pt td.q{font-weight:700}
+  .pt tr.blk td{background:#505050!important;color:#fff;text-align:center;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .pt tr.sec td{background:#d9d9d9!important;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .pt tr{break-inside:avoid}
 }
@@ -265,7 +293,7 @@ nav.tabbar .wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bloc
 
   <section id="viewLanc" hidden><div class="wrap">
     <div class="resumo" id="resumo"></div>
-    <button class="btn primary big" id="abrirPdf" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>Imprimir ou gerar PDF</button>
+    <button class="btn primary big" id="abrirPdf" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Finalizar o dia</button>
     <button class="btn envio" id="abrirEnvio" type="button" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>Enviar aproveitamento para a planilha</button>
     <div class="envst" id="envst" hidden></div>
     <div id="grupos"></div>
@@ -310,31 +338,66 @@ nav.tabbar .wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bloc
 
 <div class="sheet" id="sheet" hidden>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-    <h2 id="sheetTitle">Imprimir planilha</h2>
-    <div class="grid2" style="grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)">
-      <label class="field"><span>Tipo de lançamento</span><select id="tipo"><option value="AVARIAS">Avarias (sem R)</option><option value="APROVEITAMENTO REFEITÓRIO">Aproveitamento refeitório (com R)</option></select></label>
-      <label class="field"><span>Data</span><input type="date" id="dataPdf"></label>
-    </div>
-    <label class="opt"><input type="radio" name="modo" id="modoLancados" value="lancados" checked><div><b>Só os itens lançados</b><span>Mesmo layout da planilha, só com as linhas que têm quantidade.</span></div></label>
-    <label class="opt"><input type="radio" name="modo" id="modoCompleto" value="completo"><div><b>Planilha completa</b><span>Todas as abas e todos os produtos, com as quantidades preenchidas.</span></div></label>
+    <div class="fhdr"><h2 id="sheetTitle">Finalizar o dia</h2><label class="fdata"><span>Data</span><input type="date" id="dataPdf"></label></div>
+    <input type="hidden" id="tipo" value="AVARIAS">
+
+    <section class="fcard av" id="fcAv">
+      <div class="ftop"><span class="fnum fic" aria-hidden="true">1</span><div class="ftit"><b>Papel para o Consinco</b><small id="fAvSub">avarias e refeitório na mesma folha</small></div><span class="fst" id="fAvSt"></span></div>
+      <div class="fbtns">
+        <button class="btn fb primary bprint so-app" type="button" data-tipo="TUDO">Imprimir</button>
+        <button class="btn fb bpdf" type="button" data-tipo="TUDO">PDF</button>
+        <button class="btn fb bshare so-app" type="button" data-tipo="TUDO" hidden>Compartilhar</button>
+      </div>
+    </section>
+
+    <section class="fcard ap" id="fcAp">
+      <div class="ftop"><span class="fnum fic" aria-hidden="true">2</span><div class="ftit"><b>Cópia do refeitório na planilha</b><small id="fApSub">itens com R · planilha do Drive</small></div><span class="fst" id="fApSt"></span></div>
+      <div class="fbtns" id="fApBtns">
+        <button class="btn fb benv" type="button" id="fEnviar">Enviar para a planilha</button>
+        <button class="btn fb" type="button" id="fLider">Mandar para o líder</button>
+      </div>
+      <div class="flinks"><button class="lnk" type="button" id="fCfg">Ligar este celular à planilha (só líder)</button></div>
+    </section>
+
     <div class="msg" id="pdfMsg" hidden></div>
-    <div class="actions">
-      <button class="btn primary" id="imprimir" type="button">Imprimir</button>
-    </div>
-    <div class="actions">
-      <button class="btn ghost" id="baixar" type="button">Baixar PDF</button>
-      <button class="btn ghost" id="compartilhar" type="button" hidden>Compartilhar</button>
-    </div>
+
+    <details class="mais">
+      <summary>Mais opções</summary>
+      <div class="maisc">
+        <label class="opt"><input type="radio" name="modo" id="modoLancados" value="lancados" checked><div><b>Só os itens lançados</b><span>O normal: só as linhas com quantidade.</span></div></label>
+        <label class="opt"><input type="radio" name="modo" id="modoCompleto" value="completo"><div><b>Planilha completa</b><span>Todos os produtos, com as quantidades preenchidas.</span></div></label>
+        <div class="flinks"><span class="fsep">Papel separado:</span><button class="lnk bpdf" type="button" data-tipo="AVARIAS">PDF só avarias</button><button class="lnk bpdf" type="button" data-tipo="APROVEITAMENTO REFEITÓRIO">PDF só refeitório</button></div>
+        <button class="btn ghost" type="button" id="fCfg2">Ligar este celular à planilha do refeitório</button>
+        <div class="backup">
+          <span>Backup dos dados (lançamentos, produtos cadastrados e códigos ligados)</span>
+          <div class="actions">
+            <button class="btn ghost" id="exportar" type="button">Exportar</button>
+            <label class="btn ghost" for="importar" style="text-align:center">Importar</label>
+            <input type="file" id="importar" class="vh" accept=".json,application/json">
+          </div>
+        </div>
+      </div>
+    </details>
+
     <div class="actions">
       <button class="btn ghost" id="fechar" type="button">Voltar</button>
+      <button class="btn danger" id="fZerar" type="button">Zerar para o próximo dia</button>
     </div>
-    <div class="backup">
-      <span>Backup dos dados (lançamentos, produtos cadastrados e códigos ligados)</span>
-      <div class="actions">
-        <button class="btn ghost" id="exportar" type="button">Exportar</button>
-        <label class="btn ghost" for="importar" style="text-align:center">Importar</label>
-        <input type="file" id="importar" class="vh" accept=".json,application/json">
-      </div>
+    <div class="actions" id="fZerarConf" hidden>
+      <button class="btn ghost" id="fZerarNao" type="button">Cancelar</button>
+      <button class="btn danger" id="fZerarSim" type="button" style="border-color:var(--danger)">Sim, apagar os lançados</button>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="receb" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="recebTitle">
+    <h2 id="recebTitle">Aproveitamento recebido</h2>
+    <p id="recebTxt"></p>
+    <ul class="elist" id="recebLista"></ul>
+    <div class="msg err" id="recebMsg" hidden></div>
+    <div class="actions">
+      <button class="btn ghost" id="recebNao" type="button">Ignorar</button>
+      <button class="btn primary" id="recebSim" type="button" style="background:var(--d0);border-color:var(--d0);color:#fff">Enviar para a planilha</button>
     </div>
   </div>
 </div>
@@ -460,7 +523,7 @@ function salvarR() { try { localStorage.setItem(KEY_R, JSON.stringify(aprov)); l
 // tipo de lançamento: itens com R = aproveitamento do refeitório; sem R = avarias
 let tipoAtual = "AVARIAS";
 const ehAprov = t => t !== "AVARIAS";
-function qv(k) { return (k in qtd) && (!!aprov[k] === ehAprov(tipoAtual)) ? qtd[k] : ""; }
+function qv(k) { if (!(k in qtd)) return ""; if (tipoAtual === "TUDO") return qtd[k]; return (!!aprov[k] === ehAprov(tipoAtual)) ? qtd[k] : ""; }
 let qtd = {};
 try { qtd = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { qtd = {}; }
 function salvar() { try { localStorage.setItem(KEY, JSON.stringify(qtd)); } catch (e) {} }
@@ -727,42 +790,103 @@ $("main").addEventListener("focusout", e => {
 // ---- painel de impressão ----
 function toast(m) { const el = $("toast"); el.textContent = m; el.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => el.hidden = true, 2600); }
 function msg(m, err) { const el = $("pdfMsg"); el.hidden = !m; el.textContent = m || ""; el.classList.toggle("err", !!err); }
+const KEY_FEITO = "quebra-flv-feito-v1";
+let feito = {};
+try { feito = JSON.parse(localStorage.getItem(KEY_FEITO) || "{}") || {}; } catch (e) { feito = {}; }
+function marcarFeito(chave) { feito[chave] = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); try { localStorage.setItem(KEY_FEITO, JSON.stringify(feito)); } catch (e) {} renderFinal(); }
+function renderFinal() {
+  const ks = Object.keys(qtd), nAp = ks.filter(k => aprov[k]).length, nAv = ks.length - nAp;
+  const nT = ks.length;
+  $("fAvSub").textContent = nT ? `${nAv} ${nAv === 1 ? "avaria" : "avarias"} + ${nAp} refeitório · mesma folha` : "nenhum item lançado";
+  $("fApSub").textContent = nAp ? `${nAp} ${nAp === 1 ? "item" : "itens"} com R · planilha do Drive` : "nenhum item com R";
+  $("fcAv").classList.toggle("vazio", !nT); $("fcAp").classList.toggle("vazio", !nAp);
+  const sAv = $("fAvSt");
+  sAv.textContent = !nT ? "—" : feito.av ? `✓ feito ${feito.av}` : "pendente";
+  sAv.classList.toggle("ok", !!(nT && feito.av));
+  const l = aEnviar(), pend = l.filter(x => x.falta > 0).length, ligado = !!urlPlanilha();
+  const sAp = $("fApSt");
+  sAp.textContent = !nAp ? "nenhum item" : !pend ? "✓ enviado" : feito.lider && !ligado ? `✓ mandado ${feito.lider}` : `${pend} para enviar`;
+  sAp.classList.toggle("ok", !!(nAp && (!pend || (feito.lider && !ligado))));
+  // celular ligado à planilha: Enviar em destaque; senão, Mandar para o líder
+  $("fEnviar").hidden = !ligado; $("fLider").classList.toggle("lider1", !ligado);
+  $("fEnviar").disabled = !pend; $("fCfg").hidden = ligado;
+}
 $("abrirPdf").addEventListener("click", () => {
-  msg("");
-  const n = Object.keys(qtd).length;
-  if (!n) { $("modoCompleto").checked = true; msg("Ainda não há quantidades lançadas. Você pode baixar a planilha em branco."); }
-  if (!$("dataPdf").value) { const d = new Date(); $("dataPdf").value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
-  $("tipo").value = "AVARIAS";
+  msg(""); $("fZerarConf").hidden = true; $("fZerar").hidden = false;
+  if (!$("dataPdf").value) $("dataPdf").value = hojeISO();
+  $("modoLancados").checked = true;
+  renderFinal();
   $("sheet").hidden = false;
 });
+// os botões dos cartões dizem o tipo (Avarias / Aproveitamento refeitório)
+let acaoPDF = null, acaoPrint = null, acaoShare = null;
+$("sheet").addEventListener("click", e => {
+  const b = e.target.closest("[data-tipo]"); if (!b) return;
+  $("tipo").value = b.dataset.tipo; msg("");
+  const fn = b.classList.contains("bpdf") ? acaoPDF : b.classList.contains("bprint") ? acaoPrint : acaoShare;
+  if (fn) fn(b.dataset.tipo);
+});
+$("fEnviar").addEventListener("click", () => { $("envData").value = $("dataPdf").value || hojeISO(); enviar(false); });
+$("fCfg").addEventListener("click", () => { $("sheet").hidden = true; abrirCfg(); });
+$("fCfg2").addEventListener("click", () => { $("sheet").hidden = true; abrirCfg(); });
+$("fZerar").addEventListener("click", () => { $("fZerar").hidden = true; $("fZerarConf").hidden = false; });
+$("fZerarNao").addEventListener("click", () => { $("fZerar").hidden = false; $("fZerarConf").hidden = true; });
+$("fZerarSim").addEventListener("click", () => $("simLimpar").click());
 $("fechar").addEventListener("click", () => $("sheet").hidden = true);
 $("sheet").addEventListener("click", e => { if (e.target.id === "sheet") $("sheet").hidden = true; });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { ["sheet", "novo", "vinc", "falha", "envio", "cfg"].forEach(id => $(id).hidden = true); if (rodando || !$("cam").hidden) fecharCamera(); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { ["sheet", "novo", "vinc", "falha", "envio", "cfg", "receb"].forEach(id => $(id).hidden = true); if (rodando || !$("cam").hidden) fecharCamera(); } });
 $("limpar").addEventListener("click", () => { $("zonaLimpar").hidden = true; $("confirmaLimpar").hidden = false; });
 $("naoLimpar").addEventListener("click", () => { $("zonaLimpar").hidden = false; $("confirmaLimpar").hidden = true; });
 $("simLimpar").addEventListener("click", () => {
-  qtd = {}; aprov = {}; enviados = {}; salvar(); salvarR(); $("sheet").hidden = true; renderLanc(); totais(); toast("Lançamentos zerados");
+  qtd = {}; aprov = {}; enviados = {}; feito = {}; salvar(); salvarR(); try { localStorage.setItem(KEY_FEITO, "{}"); } catch (e) {}
+  $("dataPdf").value = ""; $("envData").value = ""; $("sheet").hidden = true; renderLanc(); totais(); toast("Lançamentos zerados. Bom próximo dia!");
 });
 
-function gerarPDF(modo, tipo, dataBR) {
+// O que vai no papel: tipo "TUDO" = avarias e refeitório na mesma folha, cada parte com seu título.
+function blocos(modo, tipo) {
+  const lista = modo === "completo" ? [["TUDO", null]]
+    : tipo === "TUDO" ? [["AVARIAS", "AVARIAS"], ["APROVEITAMENTO REFEITÓRIO", "REFEITÓRIO"]] : [[tipo, null]];
+  const out = [];
+  lista.forEach(([tp, rotulo]) => {
+    tipoAtual = tp;
+    const secoes = [];
+    ABAS.forEach((aba, s) => {
+      const linhas = itensDaAba(s).filter(([cod]) => modo === "completo" || qv(s + ":" + cod))
+        .map(([cod, nome, emb]) => [cod, nome, emb, qv(s + ":" + cod)]);
+      if (linhas.length) secoes.push({ aba, linhas });
+    });
+    if (secoes.length) out.push({ rotulo, secoes });
+  });
   tipoAtual = tipo;
+  return out;
+}
+function tituloPapel(bl, tipo) {
+  if (bl.length > 1) return "AVARIAS E REFEITÓRIO";
+  if (tipo === "TUDO") return bl[0] && bl[0].rotulo ? bl[0].rotulo : "AVARIAS";
+  return tipo === "AVARIAS" ? "AVARIAS" : "REFEITÓRIO";
+}
+function nomeArquivo(tipo, iso) {
+  const [aa, mm, dd] = iso.split("-");
+  return `${tipo === "TUDO" ? "Quebra FLV" : tipo === "AVARIAS" ? "Avarias FLV" : "Refeitorio FLV"} ${dd}-${mm}-${aa}.pdf`;
+}
+function gerarPDF(modo, tipo, dataBR) {
+  const bl = blocos(modo, tipo);
+  if (!bl.length) return null;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const L = 13, W = 184, top = 21.3, rowH = 4.15;
   const cw = [25, 65, 10, 84];
-  // todas as estruturas numa tabela só, separadas por uma linha de título (economiza papel)
   const corpo = [], usadas = [];
-  ABAS.forEach((aba, s) => {
-    const linhas = itensDaAba(s)
-      .filter(([cod]) => modo === "completo" || qv(s + ":" + cod))
-      .map(([cod, nome, emb]) => [cod, nome, emb, qv(s + ":" + cod)]);
-    if (!linhas.length) return;
-    usadas.push(aba.estrutura.replace(/^ESTRUTURA MERCADOLÓGICA:\s*/i, ""));
-    corpo.push([{ content: aba.estrutura, colSpan: 4, styles: { fillColor: [217, 217, 217], fontStyle: "bold", halign: "left" } }]);
-    corpo.push(...linhas);
+  bl.forEach(b => {
+    if (bl.length > 1) corpo.push([{ content: b.rotulo, colSpan: 4, styles: { fillColor: [80, 80, 80], textColor: 255, fontStyle: "bold", halign: "center", fontSize: 9 } }]);
+    b.secoes.forEach(({ aba, linhas }) => {
+      const nomeEst = aba.estrutura.replace(/^ESTRUTURA MERCADOLÓGICA:\s*/i, "");
+      if (!usadas.includes(nomeEst)) usadas.push(nomeEst);
+      corpo.push([{ content: aba.estrutura, colSpan: 4, styles: { fillColor: [217, 217, 217], fontStyle: "bold", halign: "left" } }]);
+      corpo.push(...linhas);
+    });
   });
-  if (!corpo.length) return null;
-  const cabecalho = ["DONA MERCADO, HORTIFRUTI & ADEGA", "DEPARTAMENTO DE PREVENÇÃO DE PERDAS", "PLANILHA PADRÃO PARA LANÇAMENTOS DE " + tipo, "SETOR: HORTIFRUTI",
+  const cabecalho = ["DONA MERCADO, HORTIFRUTI & ADEGA", "DEPARTAMENTO DE PREVENÇÃO DE PERDAS", "PLANILHA PADRÃO PARA LANÇAMENTOS DE " + tituloPapel(bl, tipo), "SETOR: HORTIFRUTI",
     "ESTRUTURA MERCADOLÓGICA: " + usadas.join(" / "), "DATA: " + dataBR];
   doc.setFont("helvetica", "bold"); doc.setTextColor(0);
   const limite = 2 * ((L + cw[0] + cw[1] + cw[2] + 43) - (L + W / 2)); // linha comprida não passa por cima do logo
@@ -784,22 +908,20 @@ function gerarPDF(modo, tipo, dataBR) {
     headStyles: { fillColor: [191, 191, 191], textColor: 0, fontStyle: "bold", halign: "center" },
     columnStyles: { 0: { cellWidth: cw[0], halign: "center" }, 1: { cellWidth: cw[1] }, 2: { cellWidth: cw[2] }, 3: { cellWidth: cw[3], fontStyle: "bold" } }
   });
-  // numeração quando passar de uma folha
   const n = doc.getNumberOfPages();
   if (n > 1) for (let pg = 1; pg <= n; pg++) { doc.setPage(pg); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.text(`Folha ${pg} de ${n}`, L + W, 291, { align: "right" }); }
   return doc;
 }
 
-function preparar() {
+function preparar(tipo) {
   const modo = document.querySelector('input[name="modo"]:checked').value;
-  const tipo = $("tipo").value, iso = $("dataPdf").value;
+  const iso = $("dataPdf").value;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) { msg("Escolha a data do lançamento.", true); $("dataPdf").focus(); return null; }
   const [aa, mm, dd] = iso.split("-");
-  try { localStorage.setItem("quebra-flv-tipo", tipo); } catch (e) {}
   tipoAtual = tipo;
   const temItens = modo === "completo" || Object.keys(qtd).some(k => qv(k));
-  if (!temItens) { msg(tipo === "AVARIAS" ? "Nenhum item de avaria (sem R) lançado." : "Nenhum item marcado com R para aproveitamento.", true); return null; }
-  return { modo, tipo, dataBR: `${dd}/${mm}/${aa}`, nome: `${tipo === "AVARIAS" ? "Avarias" : "Aproveitamento refeitorio"} FLV ${dd}-${mm}-${aa}.pdf` };
+  if (!temItens) { msg(tipo === "AVARIAS" ? "Nenhum item de avaria (sem R) lançado." : tipo === "TUDO" ? "Nenhum item lançado ainda." : "Nenhum item marcado com R.", true); return null; }
+  return { modo, tipo, dataBR: `${dd}/${mm}/${aa}`, nome: nomeArquivo(tipo, iso) };
 }
 function fazerPDF(p) {
   if (!window.jspdf) { msg("O gerador de PDF não carregou. Abra o app de novo com internet uma vez.", true); return null; }
@@ -807,45 +929,47 @@ function fazerPDF(p) {
 }
 // impressão direta: monta a planilha em HTML no mesmo layout e chama a impressão do celular
 function montarImpressao(p) {
-  const secoes = [], usadas = [];
-  ABAS.forEach((aba, s) => {
-    const linhas = itensDaAba(s).filter(([cod]) => p.modo === "completo" || qv(s + ":" + cod));
-    if (!linhas.length) return;
-    usadas.push(aba.estrutura.replace(/^ESTRUTURA MERCADOLÓGICA:\s*/i, ""));
-    secoes.push(`<tr class="sec"><td colspan="4">${esc(aba.estrutura)}</td></tr>` + linhas.map(([cod, nome, emb]) =>
-      `<tr><td class="c">${cod}</td><td>${esc(nome)}</td><td>${esc(emb)}</td><td class="q">${esc(qv(s + ":" + cod))}</td></tr>`).join(""));
+  const bl = blocos(p.modo, p.tipo), usadas = [], linhasHtml = [];
+  bl.forEach(b => {
+    if (bl.length > 1) linhasHtml.push(`<tr class="blk"><td colspan="4">${esc(b.rotulo)}</td></tr>`);
+    b.secoes.forEach(({ aba, linhas }) => {
+      const nomeEst = aba.estrutura.replace(/^ESTRUTURA MERCADOLÓGICA:\s*/i, "");
+      if (!usadas.includes(nomeEst)) usadas.push(nomeEst);
+      linhasHtml.push(`<tr class="sec"><td colspan="4">${esc(aba.estrutura)}</td></tr>` + linhas.map(([cod, nome, emb, q]) =>
+        `<tr><td class="c">${cod}</td><td>${esc(nome)}</td><td>${esc(emb)}</td><td class="q">${esc(q)}</td></tr>`).join(""));
+    });
   });
-  const cab = ["DONA MERCADO, HORTIFRUTI & ADEGA", "DEPARTAMENTO DE PREVENÇÃO DE PERDAS", "PLANILHA PADRÃO PARA LANÇAMENTOS DE " + p.tipo, "SETOR: HORTIFRUTI",
+  const cab = ["DONA MERCADO, HORTIFRUTI & ADEGA", "DEPARTAMENTO DE PREVENÇÃO DE PERDAS", "PLANILHA PADRÃO PARA LANÇAMENTOS DE " + tituloPapel(bl, p.tipo), "SETOR: HORTIFRUTI",
     "ESTRUTURA MERCADOLÓGICA: " + usadas.join(" / "), "DATA: " + p.dataBR];
   const tam = t => t.length > 74 ? "6.3pt" : t.length > 62 ? "7.3pt" : t.length > 52 ? "8.4pt" : "9.5pt";
   $("print").innerHTML = `<div class="ph"><img src="${LOGO}" alt="">${cab.map(t => `<div style="font-size:${tam(t)}">${esc(t)}</div>`).join("")}</div>
     <table class="pt"><colgroup><col style="width:13.6%"><col style="width:35.3%"><col style="width:5.4%"><col style="width:45.7%"></colgroup>
-    <thead><tr><th>Código Produto</th><th>Produto</th><th>Emb</th><th>Quantidade</th></tr></thead><tbody>${secoes.join("")}</tbody></table>`;
+    <thead><tr><th>Código Produto</th><th>Produto</th><th>Emb</th><th>Quantidade</th></tr></thead><tbody>${linhasHtml.join("")}</tbody></table>`;
 }
-$("imprimir").addEventListener("click", () => {
-  const p = preparar(); if (!p) return;
+acaoPrint = tipo => {
+  const p = preparar(tipo); if (!p) return;
   montarImpressao(p); msg("");
   const t0 = document.title; document.title = p.nome.replace(/\.pdf$/, "");
-  setTimeout(() => { window.print(); document.title = t0; }, 50);
-});
+  setTimeout(() => { window.print(); document.title = t0; marcarFeito("av"); }, 50);
+};
 function baixarBlob(blob, nome) {
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
 }
-$("baixar").addEventListener("click", () => {
-  const p = preparar(); if (!p) return;
+acaoPDF = tipo => {
+  const p = preparar(tipo); if (!p) return;
   const doc = fazerPDF(p); if (!doc) return;
   baixarBlob(doc.output("blob"), p.nome);
-  $("sheet").hidden = true; toast("PDF salvo em Downloads");
-});
-(function () { try { const f = new File(["x"], "x.pdf", { type: "application/pdf" }); if (navigator.canShare && navigator.canShare({ files: [f] })) $("compartilhar").hidden = false; } catch (e) {} })();
-$("compartilhar").addEventListener("click", async () => {
-  const p = preparar(); if (!p) return;
+  marcarFeito("av"); toast("PDF salvo em Downloads");
+};
+(function () { try { const f = new File(["x"], "x.pdf", { type: "application/pdf" }); if (navigator.canShare && navigator.canShare({ files: [f] })) document.querySelectorAll(".bshare").forEach(b => b.hidden = false); } catch (e) {} })();
+acaoShare = async tipo => {
+  const p = preparar(tipo); if (!p) return;
   const doc = fazerPDF(p); if (!doc) return;
   const file = new File([doc.output("blob")], p.nome, { type: "application/pdf" });
-  try { await navigator.share({ files: [file], title: p.nome }); $("sheet").hidden = true; }
-  catch (e) { if (e && e.name !== "AbortError") msg("Não deu para compartilhar. Use “Baixar PDF”.", true); }
-});
+  try { await navigator.share({ files: [file], title: p.nome }); marcarFeito("av"); }
+  catch (e) { if (e && e.name !== "AbortError") msg("Não deu para compartilhar. Use o PDF.", true); }
+};
 // backup
 $("exportar").addEventListener("click", () => {
   const d = new Date(), dd = String(d.getDate()).padStart(2, "0"), mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -863,11 +987,12 @@ $("importar").addEventListener("change", async () => {
     salvarExtras(); montarProdutos();
     Object.entries(d.codigos || {}).forEach(([c, k]) => { if (PRODUTOS.some(p => p.k === k)) { codigos[c] = k; nc++; } }); salvarCodigos();
     Object.entries(d.lancamentos || {}).forEach(([k, v]) => { if (PRODUTOS.some(p => p.k === k) && somar(v) > 0) { qtd[k] = fmt(somar(v)); nl++; } }); salvar();
-    $("sheet").hidden = true; chips(); render();
+    $("sheet").hidden = true; chips(); render(); totais();
     toast(`Importado: ${nl} lançamentos, ${np} produtos, ${nc} códigos`);
   } catch (e) { msg("Esse arquivo não é um backup do Quebra FLV.", true); }
   $("importar").value = "";
 });
+
 
 // ---- envio do aproveitamento para a planilha do Google Drive ----
 const RX_SCRIPT = /^https:\/\/script\.google\.com\/(?:a\/macros\/[\w.-]+|macros)\/s\/[\w-]+\/exec$/;
@@ -906,7 +1031,10 @@ function mostrarStatusEnvio() {
   el.hidden = !l.length;
   el.textContent = !l.length ? "" : pend ? (enviadosN ? `${pend} ${pend === 1 ? "item ainda não enviado" : "itens ainda não enviados"} · ${enviadosN} já enviados` : `${pend} ${pend === 1 ? "item para enviar" : "itens para enviar"}`) : "Tudo enviado para a planilha ✓";
 }
-function envMsg(m, err) { $("envMsg").hidden = !m; $("envMsg").innerHTML = m || ""; $("envMsg").classList.toggle("err", !!err); }
+function envMsg(m, err) {
+  if (m && err && $("envio").hidden) { abrirEnvio(); }
+  $("envMsg").hidden = !m; $("envMsg").innerHTML = m || ""; $("envMsg").classList.toggle("err", !!err);
+}
 function abrirEnvio() {
   if (!$("envData").value) $("envData").value = hojeISO();
   const l = aEnviar();
@@ -925,7 +1053,8 @@ async function enviar(novaSemana) {
   const lista = aEnviar().filter(x => x.falta > 0);
   if (!lista.length) { envMsg("Não há itens novos para enviar."); return; }
   const itens = lista.map(x => ({ cod: x.p.cod, desc: x.p.nome, qtd: x.falta, emb: x.p.emb.split(" ")[0] }));
-  $("envEnviar").disabled = true; $("envSim").disabled = true; envMsg("Enviando…");
+  $("envEnviar").disabled = true; $("envSim").disabled = true; $("fEnviar").disabled = true;
+  if ($("envio").hidden) { $("fApSt").textContent = "enviando…"; } else envMsg("Enviando…");
   let r;
   const pedido = { acao: "lancar", data: iso, itens, novaSemana: !!novaSemana };
   try {
@@ -934,9 +1063,9 @@ async function enviar(novaSemana) {
     ultimoEnvio = { url, pedido, lista };
     envMsg("Não consegui enviar direto daqui. Normalmente é porque o navegador não está com a conta da empresa ativa. Toque em <b>Enviar pela página da planilha</b>: abre uma página do Google com a sua conta e grava os itens. Quando aparecer <b>Enviado ✓</b>, volte e toque em <b>Confirmar enviado</b>.", true);
     $("envAcoes").hidden = true; $("envPagina").hidden = false;
-    $("envEnviar").disabled = false; $("envSim").disabled = false; return;
+    $("envEnviar").disabled = false; $("envSim").disabled = false; renderFinal(); return;
   }
-  $("envEnviar").disabled = false; $("envSim").disabled = false;
+  $("envEnviar").disabled = false; $("envSim").disabled = false; renderFinal();
   if (r && r.outraData) {
     envMsg(`A aba <b>${esc(r.aba)}</b> da planilha ainda está com a data <b>${esc(r.abaData || "anterior")}</b> e tem itens de outra semana. Para lançar este dia, os itens antigos dessa aba serão apagados (o Google Planilhas guarda o histórico de versões).`, true);
     $("envAcoes").hidden = true; $("envForcar").hidden = false; return;
@@ -951,14 +1080,89 @@ async function enviar(novaSemana) {
   } else {
     $("envio").hidden = true; toast(`Enviado para a aba ${r.aba}${tot}`);
   }
-  renderResumo();
+  renderResumo(); renderFinal();
 }
 $("abrirEnvio").addEventListener("click", abrirEnvio);
+const APP_URL = "https://lincoln201.github.io/quebra-flv/";
+function b64url(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function deB64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return JSON.parse(decodeURIComponent(escape(atob(s)))); }
+$("fLider").addEventListener("click", async () => {
+  const iso = $("dataPdf").value || hojeISO();
+  const itens = PRODUTOS.filter(p => aprov[p.k] && p.k in qtd).map(p => [p.k, qtd[p.k]]);
+  if (!itens.length) { msg("Nenhum item marcado com R.", true); return; }
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const link = APP_URL + "#lider=" + b64url({ v: 1, id, data: iso, itens });
+  const [aa, mm, dd] = iso.split("-");
+  const texto = `Aproveitamento refeitório ${dd}/${mm} – ${itens.length} ${itens.length === 1 ? "item" : "itens"} (Quebra FLV). Abra no celular do líder para enviar à planilha: ${link}`;
+  let foi = false;
+  if (navigator.share) { try { await navigator.share({ title: "Aproveitamento refeitório", text: texto }); foi = true; } catch (e) { if (e && e.name === "AbortError") return; } }
+  if (!foi) {
+    const a = document.createElement("a"); a.href = "https://wa.me/?text=" + encodeURIComponent(texto); a.target = "_blank"; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    try { await navigator.clipboard.writeText(texto); } catch (e) {}
+  }
+  marcarFeito("lider");
+  msg("Mensagem pronta para o WhatsApp do líder. Ele abre o link no celular dele e toca em Enviar: a cópia do refeitório vai para a planilha.");
+});
+// celular do líder: abrir o link recebido
+let recebido = null;
+function verRecebido() {
+  const h = location.hash || "";
+  if (!h.startsWith("#lider=")) return;
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  let d; try { d = deB64url(h.slice(7)); } catch (e) { toast("Link do aproveitamento inválido"); return; }
+  if (!d || !Array.isArray(d.itens)) return;
+  recebido = d;
+  const [aa, mm, dd] = String(d.data || hojeISO()).split("-");
+  const ok = d.itens.filter(([k]) => PRODUTOS.some(p => p.k === k));
+  $("recebTxt").textContent = `Refeitório de ${dd}/${mm}, mandado de outro celular. Toque em Enviar para colocar a cópia na planilha. Seus lançamentos não mudam.`;
+  recebForcar = false; $("recebSim").textContent = "Enviar para a planilha"; $("recebSim").disabled = false;
+  $("recebLista").innerHTML = ok.map(([k, q]) => { const p = PRODUTOS.find(x => x.k === k); return `<li><span>${esc(p.nome)}<br><small>Cód. ${p.cod}</small></span><b>${esc(String(q))} ${p.emb.split(" ")[0].toLowerCase()}</b></li>`; }).join("");
+  let ja = []; try { ja = JSON.parse(localStorage.getItem("quebra-flv-recebidos") || "[]"); } catch (e) {}
+  const faltam = d.itens.length - ok.length;
+  const avisos = [];
+  if (ja.includes(d.id)) avisos.push("Esse envio já foi mandado para a planilha antes. Enviar de novo vai lançar os itens duas vezes.");
+  if (faltam) avisos.push(`${faltam} ${faltam === 1 ? "item é" : "itens são"} de produtos cadastrados no outro celular e não existem aqui.`);
+  $("recebMsg").hidden = !avisos.length; $("recebMsg").textContent = avisos.join(" ");
+  $("receb").hidden = false;
+}
+$("recebNao").addEventListener("click", () => { $("receb").hidden = true; recebido = null; });
+let recebForcar = false;
+function recebAviso(m) { $("recebMsg").hidden = !m; $("recebMsg").innerHTML = m || ""; }
+function marcarRecebido(id) { try { const ja = JSON.parse(localStorage.getItem("quebra-flv-recebidos") || "[]"); ja.push(id); localStorage.setItem("quebra-flv-recebidos", JSON.stringify(ja.slice(-50))); } catch (e) {} }
+$("recebSim").addEventListener("click", async () => {
+  if (!recebido) return;
+  const url = urlPlanilha();
+  if (!url) { recebAviso("Este celular ainda não está ligado à planilha. Abra <b>Finalizar o dia → Mais opções → Ligar este celular à planilha</b> e depois abra o link de novo."); return; }
+  const itens = recebido.itens.filter(([k, q]) => PRODUTOS.some(p => p.k === k) && somar(q) > 0).map(([k, q]) => {
+    const p = PRODUTOS.find(x => x.k === k); return { cod: p.cod, desc: p.nome, qtd: somar(q), emb: p.emb.split(" ")[0] };
+  });
+  if (!itens.length) { recebAviso("Nenhum item para enviar."); return; }
+  const pedido = { acao: "lancar", data: recebido.data || hojeISO(), itens, novaSemana: recebForcar };
+  $("recebSim").disabled = true; recebAviso("Enviando…");
+  let r;
+  try { r = await chamarScript(url, pedido); }
+  catch (e) {
+    $("recebSim").disabled = false;
+    window.open(urlPagina(url, pedido), "_blank"); marcarRecebido(recebido.id);
+    recebAviso("Não deu para enviar direto. Abri a página da planilha com a sua conta: se apareceu <b>Enviado ✓</b>, está feito."); return;
+  }
+  $("recebSim").disabled = false;
+  if (r && r.outraData) {
+    recebForcar = true; $("recebSim").textContent = "Apagar semana antiga e lançar";
+    recebAviso(`A aba <b>${esc(r.aba)}</b> está com a data <b>${esc(r.abaData || "anterior")}</b>, de outra semana. Para lançar, os itens antigos dessa aba serão apagados.`); return;
+  }
+  if (!r || !r.ok) { recebAviso("A planilha respondeu com erro: " + esc((r && r.erro) || "desconhecido")); return; }
+  marcarRecebido(recebido.id); recebido = null; $("receb").hidden = true;
+  const tot = typeof r.total === "number" ? ` · total do dia R$ ${r.total.toFixed(2).replace(".", ",")}` : "";
+  toast(`Refeitório enviado para a aba ${r.aba}${tot}`);
+});
+window.addEventListener("hashchange", verRecebido);
 $("envAbrirPag").addEventListener("click", () => { if (ultimoEnvio) window.open(urlPagina(ultimoEnvio.url, ultimoEnvio.pedido), "_blank"); });
 $("envConfirma").addEventListener("click", () => {
   if (!ultimoEnvio) return;
   ultimoEnvio.lista.forEach(x => { enviados[x.p.k] = fmt(x.ja + x.falta); });
-  salvarR(); ultimoEnvio = null; $("envio").hidden = true; renderResumo(); toast("Marcado como enviado");
+  salvarR(); ultimoEnvio = null; $("envio").hidden = true; renderResumo(); renderFinal(); toast("Marcado como enviado");
 });
 $("envFechar").addEventListener("click", () => $("envio").hidden = true);
 $("envio").addEventListener("click", e => { if (e.target.id === "envio") $("envio").hidden = true; });
@@ -1245,7 +1449,7 @@ $("fDigitado").addEventListener("click", () => {
   });
   if (mudou) { salvarExtras(); salvar(); salvarCodigos(); montarProdutos(); }
 })();
-chips(); render();
+chips(); render(); verRecebido();
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 </script>
 </body>
