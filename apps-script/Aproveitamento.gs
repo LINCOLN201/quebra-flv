@@ -82,8 +82,9 @@ function esc_(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "
 function lancar(ss, req) {
   var partes = String(req.data || "").split("-").map(Number);
   if (partes.length !== 3 || partes.some(isNaN)) return { ok: false, erro: "Data inválida" };
-  var dia = new Date(partes[0], partes[1] - 1, partes[2]);
+  var dia = new Date(partes[0], partes[1] - 1, partes[2], 12);
   var nomeAba = ABAS_POR_DIA[dia.getDay()];
+  var tz = ss.getSpreadsheetTimeZone();
   var sh = acharAba(ss, nomeAba);
   if (!sh) return { ok: false, erro: "Não achei a aba " + nomeAba + " na planilha" };
 
@@ -92,18 +93,17 @@ function lancar(ss, req) {
 
   // A aba é da semana certa? (a data em C5 tem que ser a do dia enviado)
   var atual = sh.getRange(CELULA_DATA).getValue();
-  var mesmaData = atual instanceof Date && atual.getFullYear() === dia.getFullYear() &&
-                  atual.getMonth() === dia.getMonth() && atual.getDate() === dia.getDate();
+  var mesmaData = atual instanceof Date && Utilities.formatDate(atual, tz, "yyyy-MM-dd") === String(req.data);
   var n = ULTIMA_LINHA - PRIMEIRA_LINHA + 1;
   var colB = sh.getRange(PRIMEIRA_LINHA, 2, n, 1).getValues();
   var ocupadas = colB.filter(function (r) { return r[0] !== "" && r[0] !== null; }).length;
   if (!mesmaData && ocupadas > 0 && !req.novaSemana) {
     return { ok: false, outraData: true, aba: nomeAba,
-             abaData: atual instanceof Date ? Utilities.formatDate(atual, ss.getSpreadsheetTimeZone(), "dd/MM/yyyy") : String(atual || "") };
+             abaData: atual instanceof Date ? Utilities.formatDate(atual, tz, "dd/MM/yyyy") : String(atual || "") };
   }
   if (!mesmaData) {
     if (ocupadas > 0) limparAba(sh);
-    sh.getRange(CELULA_DATA).setValue(dia);
+    sh.getRange(CELULA_DATA).setValue(dataNaPlanilha(ss, partes[0], partes[1], partes[2]));
     colB = sh.getRange(PRIMEIRA_LINHA, 2, n, 1).getValues();
   }
 
@@ -135,24 +135,42 @@ function lancar(ss, req) {
 function iniciarSemana(ss, req) {
   var p = String(req.segunda || "").split("-").map(Number);
   if (p.length !== 3 || p.some(isNaN)) return { ok: false, erro: "Data inválida" };
-  var seg = new Date(p[0], p[1] - 1, p[2]);
+  var seg = new Date(p[0], p[1] - 1, p[2], 12);
   seg.setDate(seg.getDate() - ((seg.getDay() + 6) % 7));
   var feitas = [];
   ["SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SABADO", "DOMINGO"].forEach(function (nome, i) {
     var sh = acharAba(ss, nome); if (!sh) return;
     limparAba(sh);
     var d = new Date(seg); d.setDate(seg.getDate() + i);
-    sh.getRange(CELULA_DATA).setValue(d);
+    sh.getRange(CELULA_DATA).setValue(dataNaPlanilha(ss, d.getFullYear(), d.getMonth() + 1, d.getDate()));
     feitas.push(nome);
   });
   SpreadsheetApp.flush();
   return { ok: true, abas: feitas, segunda: Utilities.formatDate(seg, ss.getSpreadsheetTimeZone(), "dd/MM/yyyy") };
 }
 
+// Meia-noite do dia no fuso da planilha (evita a data aparecer um dia antes).
+function dataNaPlanilha(ss, a, m, d) {
+  var s = a + "-" + ("0" + m).slice(-2) + "-" + ("0" + d).slice(-2) + " 00:00:00";
+  return Utilities.parseDate(s, ss.getSpreadsheetTimeZone(), "yyyy-MM-dd HH:mm:ss");
+}
+
 // Custo unitário da aba CUSTO: primeiro pelo código, depois pelo nome (como a planilha já fazia).
 function formulaCusto(lin) {
-  return "=IFERROR(VLOOKUP(B" + lin + "&\"\",CUSTO!A:E,5,0),IFERROR(VLOOKUP(B" + lin +
-         ",CUSTO!A:E,5,0),IFERROR(VLOOKUP(C" + lin + ",CUSTO!B:E,4,0),0)))";
+  var s = sep_();
+  return "=IFERROR(VLOOKUP(B" + lin + "&\"\"" + s + "CUSTO!A:E" + s + "5" + s + "0)" + s +
+         "IFERROR(VLOOKUP(B" + lin + s + "CUSTO!A:E" + s + "5" + s + "0)" + s +
+         "IFERROR(VLOOKUP(C" + lin + s + "CUSTO!B:E" + s + "4" + s + "0)" + s + "0)))";
+}
+
+// Separador de argumentos das fórmulas: planilha em português usa ";" (em inglês, ",").
+var SEP_CACHE_ = null;
+function sep_() {
+  if (SEP_CACHE_ === null) {
+    var loc = String(SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale() || "");
+    SEP_CACHE_ = /^en/i.test(loc) ? "," : ";";
+  }
+  return SEP_CACHE_;
 }
 
 // Nome do produto pelo código: CUSTO primeiro (mais atual), depois BANCO.
@@ -174,7 +192,8 @@ function nomesPorCodigo(ss) {
 function limparAba(sh) {
   var linhas = [];
   for (var lin = PRIMEIRA_LINHA; lin <= ULTIMA_LINHA; lin++) {
-    linhas.push(["", "=IFERROR(VLOOKUP(B" + lin + ",BANCO!A:B,2,0),\"\")", "", formulaCusto(lin), "=D" + lin + "*E" + lin]);
+    var s = sep_();
+    linhas.push(["", "=IFERROR(VLOOKUP(B" + lin + s + "BANCO!A:B" + s + "2" + s + "0)" + s + "\"\")", "", formulaCusto(lin), "=D" + lin + "*E" + lin]);
   }
   sh.getRange(PRIMEIRA_LINHA, 2, linhas.length, 5).setFormulas(linhas);
 }
