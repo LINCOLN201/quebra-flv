@@ -175,6 +175,7 @@ html:not([data-app]) .so-app{display:none!important}
 .fhdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .fdata{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 input[type=date][readonly]{pointer-events:none;opacity:.85}
+.btn.envio.zap{background:#1f8f4e;color:#fff;border-color:#1f8f4e}
 .fdata input{font-size:15px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--fg)}
 .fcard{border-radius:18px;padding:14px;display:grid;gap:12px;border:1.5px solid var(--line)}
 .fcard.av{background:var(--surface-2)}
@@ -295,7 +296,7 @@ input[type=date][readonly]{pointer-events:none;opacity:.85}
   <section id="viewLanc" hidden><div class="wrap">
     <div class="resumo" id="resumo"></div>
     <button class="btn primary big" id="abrirPdf" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Finalizar o dia</button>
-    <button class="btn envio" id="abrirEnvio" type="button" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>Enviar aproveitamento para a planilha</button>
+    <button class="btn envio" id="abrirEnvio" type="button" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg><span id="abrirEnvioTxt">Enviar aproveitamento para a planilha</span></button>
     <div class="envst" id="envst" hidden></div>
     <div id="grupos"></div>
     <div class="empty" id="vazioL" hidden><b>Nada lançado ainda</b>Busque o produto ou leia o código de barras e digite a quantidade. Os itens aparecem aqui, separados por estrutura.<br><button class="btn primary" id="irProdutos" type="button">Ir para os produtos</button></div>
@@ -608,7 +609,12 @@ function renderResumo() {
     <ul class="rleg">${r.g.map((x, i) => x.n ? `<li><i class="dot d${i}"></i><span>${curto[i]}</span><small>${sub(x)}</small><b>${x.n}</b></li>` : "").join("")}</ul>` : ""}`;
   r.g.forEach((x, i) => { const el = document.getElementById("gsub" + i); if (el) el.textContent = `${x.n} ${x.n === 1 ? "item" : "itens"} · ${sub(x) || "0"}`; });
   $("vazioL").hidden = r.n > 0; $("abrirPdf").hidden = false; $("zonaZerar").hidden = !r.n;
-  $("abrirEnvio").hidden = !r.nr; mostrarStatusEnvio();
+  $("abrirEnvio").hidden = !r.nr;
+  // celular sem a planilha ligada (colega): o botão manda direto para o WhatsApp do líder
+  const lig = !!urlPlanilha();
+  $("abrirEnvioTxt").textContent = lig ? "Enviar aproveitamento para a planilha" : "Enviar aproveitamento para o líder";
+  $("abrirEnvio").classList.toggle("zap", !lig);
+  mostrarStatusEnvio();
 }
 function renderLanc() {
   const r = resumoDados();
@@ -1051,7 +1057,7 @@ function aEnviar() {
 function mostrarStatusEnvio() {
   const el = $("envst"); if (!el) return;
   const l = aEnviar(), pend = l.filter(x => x.falta > 0).length, enviadosN = l.filter(x => x.ja > 0 && x.falta <= 0).length;
-  el.hidden = !l.length;
+  el.hidden = !l.length || !urlPlanilha();
   el.textContent = !l.length ? "" : pend ? (enviadosN ? `${pend} ${pend === 1 ? "item ainda não enviado" : "itens ainda não enviados"} · ${enviadosN} já enviados` : `${pend} ${pend === 1 ? "item para enviar" : "itens para enviar"}`) : "Tudo enviado para a planilha ✓";
 }
 function envMsg(m, err) {
@@ -1104,7 +1110,7 @@ async function enviar(novaSemana) {
   }
   renderResumo(); renderFinal();
 }
-$("abrirEnvio").addEventListener("click", abrirEnvio);
+$("abrirEnvio").addEventListener("click", () => { if (urlPlanilha()) abrirEnvio(); else mandarLider(true); });
 const APP_URL = "https://lincoln201.github.io/quebra-flv/";
 function b64url(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function deB64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return JSON.parse(decodeURIComponent(escape(atob(s)))); }
@@ -1124,10 +1130,12 @@ function pedirFone() {
 $("fFone").addEventListener("click", () => { const d = pedirFone(); if (d) toast("WhatsApp do líder salvo: +" + d); renderFone(); });
 function renderFone() { const f = foneLider(); $("fFone").textContent = f ? "WhatsApp do líder: +" + f.slice(0, 2) + " " + f.slice(2, 4) + " " + f.slice(4) + " (trocar)" : "Cadastrar WhatsApp do líder"; }
 renderFone();
-$("fLider").addEventListener("click", async () => {
+$("fLider").addEventListener("click", () => mandarLider(false));
+async function mandarLider(daTela) {
+  const aviso = (m, err) => daTela ? toast(m) : msg(m, err);
   const iso = hojeISO();
   const itens = PRODUTOS.filter(p => aprov[p.k] && p.k in qtd).map(p => [p.k, qtd[p.k]]);
-  if (!itens.length) { msg("Nenhum item marcado com R.", true); return; }
+  if (!itens.length) { aviso("Nenhum item marcado com R.", true); return; }
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const link = APP_URL + "#lider=" + b64url({ v: 1, id, data: iso, itens });
   const [aa, mm, dd] = iso.split("-");
@@ -1142,8 +1150,8 @@ $("fLider").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(texto); } catch (e) {}
   }
   marcarFeito("lider");
-  msg("Mensagem pronta para o WhatsApp do líder. Ele abre o link no celular dele e toca em Enviar: a cópia do refeitório vai para a planilha.");
-});
+  aviso(daTela ? "Mensagem pronta no WhatsApp do líder. É só tocar em enviar." : "Mensagem pronta para o WhatsApp do líder. Ele abre o link no celular dele e toca em Enviar: a cópia do refeitório vai para a planilha.");
+}
 // celular do líder: abrir o link recebido
 let recebido = null;
 function verRecebido() {
