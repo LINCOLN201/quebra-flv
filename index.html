@@ -1109,7 +1109,7 @@ const APP_URL = "https://lincoln201.github.io/quebra-flv/";
 function b64url(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function deB64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return JSON.parse(decodeURIComponent(escape(atob(s)))); }
 const KEY_FONE = "quebra-flv-lider-fone";
-const LIDER_FONE_PADRAO = "";
+const LIDER_FONE_PADRAO = "5561982158778";
 function foneLider() { try { return localStorage.getItem(KEY_FONE) || LIDER_FONE_PADRAO; } catch (e) { return LIDER_FONE_PADRAO; } }
 function pedirFone() {
   const v = prompt("WhatsApp do líder (com DDD). Ex.: 61 99999-9999", foneLider().replace(/^55/, ""));
