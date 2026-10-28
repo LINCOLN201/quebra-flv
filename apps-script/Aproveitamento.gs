@@ -95,6 +95,17 @@ function lancar(ss, req) {
   var dia = new Date(partes[0], partes[1] - 1, partes[2], 12);
   var nomeAba = ABAS_POR_DIA[dia.getDay()];
   var tz = ss.getSpreadsheetTimeZone();
+
+  // Data travada: só aceita o dia de hoje (horário da planilha).
+  // Tolerância: o dia de ontem até 12h, para o líder que abre o link do colega depois da meia-noite.
+  var agora = new Date();
+  var pedido = partes[0] + "-" + ("0" + partes[1]).slice(-2) + "-" + ("0" + partes[2]).slice(-2);
+  var hoje = Utilities.formatDate(agora, tz, "yyyy-MM-dd");
+  var ontem = Utilities.formatDate(new Date(agora.getTime() - 86400000), tz, "yyyy-MM-dd");
+  var hora = Number(Utilities.formatDate(agora, tz, "H"));
+  if (pedido !== hoje && !(pedido === ontem && hora < 12)) {
+    return { ok: false, erro: "Só é possível lançar o dia de hoje (" + hoje.split("-").reverse().join("/") + "). Este envio é de " + pedido.split("-").reverse().join("/") + "." };
+  }
   var sh = acharAba(ss, nomeAba);
   if (!sh) return { ok: false, erro: "Não achei a aba " + nomeAba + " na planilha" };
 

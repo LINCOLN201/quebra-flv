@@ -174,6 +174,7 @@ nav.tabbar .wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bloc
 html:not([data-app]) .so-app{display:none!important}
 .fhdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .fdata{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+input[type=date][readonly]{pointer-events:none;opacity:.85}
 .fdata input{font-size:15px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--fg)}
 .fcard{border-radius:18px;padding:14px;display:grid;gap:12px;border:1.5px solid var(--line)}
 .fcard.av{background:var(--surface-2)}
@@ -338,7 +339,7 @@ html:not([data-app]) .so-app{display:none!important}
 
 <div class="sheet" id="sheet" hidden>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-    <div class="fhdr"><h2 id="sheetTitle">Finalizar o dia</h2><label class="fdata"><span>Data</span><input type="date" id="dataPdf"></label></div>
+    <div class="fhdr"><h2 id="sheetTitle">Finalizar o dia</h2><label class="fdata"><span>Data</span><input type="date" id="dataPdf" readonly tabindex="-1" title="Data do dia (travada)"></label></div>
     <input type="hidden" id="tipo" value="AVARIAS">
 
     <section class="fcard av" id="fcAv">
@@ -355,7 +356,7 @@ html:not([data-app]) .so-app{display:none!important}
         <button class="btn fb benv" type="button" id="fEnviar">Enviar para a planilha</button>
         <button class="btn fb" type="button" id="fLider">Mandar para o líder</button>
       </div>
-      <div class="flinks"><button class="lnk" type="button" id="fCfg">Ligar este celular à planilha (só líder)</button></div>
+      <div class="flinks"><button class="lnk" type="button" id="fCfg">Ligar este celular à planilha (só líder)</button><button class="lnk" type="button" id="fFone">WhatsApp do líder</button></div>
     </section>
 
     <div class="msg" id="pdfMsg" hidden></div>
@@ -431,7 +432,7 @@ html:not([data-app]) .so-app{display:none!important}
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="envioTitle">
     <h2 id="envioTitle">Enviar aproveitamento</h2>
     <p>Os itens marcados com <b>R</b> vão para a planilha de aproveitamento do Drive, na aba do dia da semana.</p>
-    <label class="field"><span>Data do aproveitamento</span><input type="date" id="envData"></label>
+    <label class="field"><span>Data do aproveitamento</span><input type="date" id="envData" readonly tabindex="-1" title="Data do dia (travada)"></label>
     <ul class="elist" id="envLista"></ul>
     <div class="msg" id="envMsg" hidden></div>
     <div class="actions" id="envAcoes">
@@ -812,7 +813,7 @@ function renderFinal() {
 }
 $("abrirPdf").addEventListener("click", () => {
   msg(""); $("fZerarConf").hidden = true; $("fZerar").hidden = false;
-  if (!$("dataPdf").value) $("dataPdf").value = hojeISO();
+  $("dataPdf").value = hojeISO(); // data travada: sempre o dia de hoje
   $("modoLancados").checked = true;
   renderFinal();
   $("sheet").hidden = false;
@@ -825,7 +826,7 @@ $("sheet").addEventListener("click", e => {
   const fn = b.classList.contains("bpdf") ? acaoPDF : b.classList.contains("bprint") ? acaoPrint : acaoShare;
   if (fn) fn(b.dataset.tipo);
 });
-$("fEnviar").addEventListener("click", () => { $("envData").value = $("dataPdf").value || hojeISO(); enviar(false); });
+$("fEnviar").addEventListener("click", () => { $("dataPdf").value = $("envData").value = hojeISO(); enviar(false); });
 $("fCfg").addEventListener("click", () => { $("sheet").hidden = true; abrirCfg(); });
 $("fCfg2").addEventListener("click", () => { $("sheet").hidden = true; abrirCfg(); });
 $("fZerar").addEventListener("click", () => { $("fZerar").hidden = true; $("fZerarConf").hidden = false; });
@@ -1058,7 +1059,7 @@ function envMsg(m, err) {
   $("envMsg").hidden = !m; $("envMsg").innerHTML = m || ""; $("envMsg").classList.toggle("err", !!err);
 }
 function abrirEnvio() {
-  if (!$("envData").value) $("envData").value = hojeISO();
+  $("envData").value = hojeISO();
   const l = aEnviar();
   $("envLista").innerHTML = l.map(x => `<li><span>${esc(x.p.nome)}<br><small>Cód. ${x.p.cod}${x.ja > 0 ? ` · já enviado ${fmt(x.ja)}` : ""}</small></span><b>${x.falta > 0 ? fmt(x.falta) + " " + x.p.emb.split(" ")[0].toLowerCase() : x.falta < 0 ? "diminuiu" : "enviado ✓"}</b></li>`).join("");
   const neg = l.filter(x => x.falta < 0);
@@ -1070,7 +1071,7 @@ function abrirEnvio() {
 async function enviar(novaSemana) {
   const url = urlPlanilha();
   if (!url) { $("envio").hidden = true; abrirCfg(); return; }
-  const iso = $("envData").value;
+  const iso = hojeISO(); $("envData").value = iso;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) { envMsg("Escolha a data.", true); return; }
   const lista = aEnviar().filter(x => x.falta > 0);
   if (!lista.length) { envMsg("Não há itens novos para enviar."); return; }
@@ -1107,18 +1108,36 @@ $("abrirEnvio").addEventListener("click", abrirEnvio);
 const APP_URL = "https://lincoln201.github.io/quebra-flv/";
 function b64url(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function deB64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return JSON.parse(decodeURIComponent(escape(atob(s)))); }
+const KEY_FONE = "quebra-flv-lider-fone";
+const LIDER_FONE_PADRAO = "";
+function foneLider() { try { return localStorage.getItem(KEY_FONE) || LIDER_FONE_PADRAO; } catch (e) { return LIDER_FONE_PADRAO; } }
+function pedirFone() {
+  const v = prompt("WhatsApp do líder (com DDD). Ex.: 61 99999-9999", foneLider().replace(/^55/, ""));
+  if (v === null) return null;
+  let d = v.replace(/\D/g, "");
+  if (!d) { try { localStorage.removeItem(KEY_FONE); } catch (e) {} return ""; }
+  if (d.length === 10 || d.length === 11) d = "55" + d;
+  if (d.length < 12) { msg("Número incompleto. Coloque o DDD + número.", true); return null; }
+  try { localStorage.setItem(KEY_FONE, d); } catch (e) {}
+  return d;
+}
+$("fFone").addEventListener("click", () => { const d = pedirFone(); if (d) toast("WhatsApp do líder salvo: +" + d); renderFone(); });
+function renderFone() { const f = foneLider(); $("fFone").textContent = f ? "WhatsApp do líder: +" + f.slice(0, 2) + " " + f.slice(2, 4) + " " + f.slice(4) + " (trocar)" : "Cadastrar WhatsApp do líder"; }
+renderFone();
 $("fLider").addEventListener("click", async () => {
-  const iso = $("dataPdf").value || hojeISO();
+  const iso = hojeISO();
   const itens = PRODUTOS.filter(p => aprov[p.k] && p.k in qtd).map(p => [p.k, qtd[p.k]]);
   if (!itens.length) { msg("Nenhum item marcado com R.", true); return; }
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const link = APP_URL + "#lider=" + b64url({ v: 1, id, data: iso, itens });
   const [aa, mm, dd] = iso.split("-");
   const texto = `Aproveitamento refeitório ${dd}/${mm} – ${itens.length} ${itens.length === 1 ? "item" : "itens"} (Quebra FLV). Abra no celular do líder para enviar à planilha: ${link}`;
+  let fone = foneLider();
+  if (!fone) { fone = pedirFone(); renderFone(); if (fone === null) return; }
   let foi = false;
-  if (navigator.share) { try { await navigator.share({ title: "Aproveitamento refeitório", text: texto }); foi = true; } catch (e) { if (e && e.name === "AbortError") return; } }
+  if (!fone && navigator.share) { try { await navigator.share({ title: "Aproveitamento refeitório", text: texto }); foi = true; } catch (e) { if (e && e.name === "AbortError") return; } }
   if (!foi) {
-    const a = document.createElement("a"); a.href = "https://wa.me/?text=" + encodeURIComponent(texto); a.target = "_blank"; a.rel = "noopener";
+    const a = document.createElement("a"); a.href = "https://wa.me/" + (fone || "") + "?text=" + encodeURIComponent(texto); a.target = "_blank"; a.rel = "noopener";
     document.body.appendChild(a); a.click(); a.remove();
     try { await navigator.clipboard.writeText(texto); } catch (e) {}
   }
