@@ -23,17 +23,18 @@ var CELULA_TOTAL = "F43";
 //   sem callback  -> página com o resultado e botão para voltar ao app
 function doGet(e) {
   var p = (e && e.parameter) || {};
-  var out = { ok: true, info: "Quebra FLV - aproveitamento do refeitório" };
+  var out = { ok: true, info: "Quebra FLV - aproveitamento do refeitório" }, req = null;
   if (p.d) {
     try {
-      out = processar(JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(p.d)).getDataAsString()));
+      req = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(p.d)).getDataAsString());
+      out = processar(req);
     } catch (err) { out = { ok: false, erro: String(err && err.message || err) }; }
   }
   if (p.callback && /^[\w$.]+$/.test(p.callback)) {
     return ContentService.createTextOutput(p.callback + "(" + JSON.stringify(out) + ");")
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
-  if (p.d) return paginaResultado(out, p.volta);
+  if (p.d) return paginaResultado(out, p.volta, req);
   return resposta(out);
 }
 
@@ -58,7 +59,7 @@ function processar(req) {
   }
 }
 
-function paginaResultado(out, volta) {
+function paginaResultado(out, volta, req) {
   var titulo, texto;
   if (out.ok && out.aba) {
     titulo = "Enviado ✓";
@@ -69,11 +70,20 @@ function paginaResultado(out, volta) {
   else if (out.ok) { titulo = "Pronto ✓"; texto = out.segunda ? "Semana iniciada em " + out.segunda : ""; }
   else if (out.outraData) { titulo = "Aba de outra semana"; texto = "A aba " + out.aba + " está com a data " + out.abaData + ". Volte ao app e confirme para apagar e lançar."; }
   else { titulo = "Erro"; texto = out.erro || "desconhecido"; }
-  var link = /^https:\/\/[\w.-]+\//.test(volta || "") ? volta : "https://lincoln201.github.io/quebra-flv/";
+  var base = /^https:\/\/[\w.-]+\//.test(volta || "") ? volta : "https://lincoln201.github.io/quebra-flv/";
+  // só volta "com o recibo" (#ok=...) quando deu certo; o app marca como enviado sozinho
+  var link = out.ok ? base : base.split("#")[0];
+  var extra = "";
+  if (out.outraData && req) {
+    var r2 = JSON.parse(JSON.stringify(req)); r2.novaSemana = true;
+    var d2 = Utilities.base64EncodeWebSafe(Utilities.newBlob(JSON.stringify(r2)).getBytes());
+    var u2 = ScriptApp.getService().getUrl() + "?d=" + encodeURIComponent(d2) + "&volta=" + encodeURIComponent(base);
+    extra = '<p><a href="' + esc_(u2) + '" target="_top" style="display:inline-block;background:#b42318;color:#fff;padding:14px 18px;border-radius:12px;text-decoration:none;font-weight:bold">Apagar a semana antiga e lançar</a></p>';
+  }
   var html = '<meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<div style="font-family:Arial,sans-serif;max-width:420px;margin:40px auto;padding:20px;text-align:center">' +
-    '<h2 style="color:' + (out.ok ? '#23603a' : '#b42318') + '">' + esc_(titulo) + '</h2><p>' + esc_(texto) + '</p>' +
-    '<p><a href="' + esc_(link) + '" target="_top" style="display:inline-block;background:#23603a;color:#fff;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:bold">Voltar ao app</a></p></div>';
+    '<h2 style="font-size:28px;color:' + (out.ok ? '#23603a' : '#b42318') + '">' + esc_(titulo) + '</h2><p style="font-size:17px">' + esc_(texto) + '</p>' + extra +
+    '<p><a href="' + esc_(link) + '" target="_top" style="display:inline-block;background:#23603a;color:#fff;padding:16px 24px;border-radius:14px;text-decoration:none;font-weight:bold;font-size:18px">Voltar ao app</a></p></div>';
   return HtmlService.createHtmlOutput(html).setTitle("Quebra FLV").addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 

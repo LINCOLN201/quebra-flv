@@ -342,11 +342,10 @@ html:not([data-app]) .so-app{display:none!important}
     <input type="hidden" id="tipo" value="AVARIAS">
 
     <section class="fcard av" id="fcAv">
-      <div class="ftop"><span class="fnum fic" aria-hidden="true">1</span><div class="ftit"><b>Papel para o Consinco</b><small id="fAvSub">avarias e refeitório na mesma folha</small></div><span class="fst" id="fAvSt"></span></div>
+      <div class="ftop"><span class="fnum fic" aria-hidden="true">1</span><div class="ftit"><b>Impressão (PDF)</b><small id="fAvSub">avarias e refeitório na mesma folha</small></div><span class="fst" id="fAvSt"></span></div>
       <div class="fbtns">
-        <button class="btn fb primary bprint so-app" type="button" data-tipo="TUDO">Imprimir</button>
-        <button class="btn fb bpdf" type="button" data-tipo="TUDO">PDF</button>
-        <button class="btn fb bshare so-app" type="button" data-tipo="TUDO" hidden>Compartilhar</button>
+        <button class="btn fb primary bshare so-app" type="button" data-tipo="TUDO" hidden>Compartilhar PDF</button>
+        <button class="btn fb bpdf" type="button" data-tipo="TUDO">Baixar PDF</button>
       </div>
     </section>
 
@@ -1014,7 +1013,30 @@ function chamarScript(url, obj) {
     document.head.appendChild(s);
   });
 }
-function urlPagina(url, obj) { return `${url}?d=${codificar(obj)}&volta=${encodeURIComponent(location.href.split("#")[0])}`; }
+function urlPagina(url, obj, volta) { return `${url}?d=${codificar(obj)}&volta=${encodeURIComponent(volta || location.href.split("#")[0])}`; }
+// No celular o Chrome não deixa o app usar o login do Google por baixo; então abre a página do Google
+// (com a conta da empresa), que grava e tem o botão "Voltar ao app" com o recibo #ok=...
+const KEY_PEND = "quebra-flv-pendente";
+function irParaPagina(url, pedido, marcar) {
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  try { localStorage.setItem(KEY_PEND, JSON.stringify({ id, ...marcar })); } catch (e) {}
+  toast("Abrindo a planilha…");
+  location.href = urlPagina(url, pedido, location.href.split("#")[0] + "#ok=" + id);
+}
+function verRecibo() {
+  const h = location.hash || "";
+  if (!h.startsWith("#ok=")) return false;
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  let pend = null; try { pend = JSON.parse(localStorage.getItem(KEY_PEND) || "null"); } catch (e) {}
+  if (!pend || pend.id !== h.slice(4)) return true;
+  if (pend.enviados) { Object.assign(enviados, pend.enviados); salvarR(); }
+  if (pend.recebido) marcarRecebido(pend.recebido);
+  try { localStorage.removeItem(KEY_PEND); } catch (e) {}
+  mostrarVista("lancados"); totais();
+  if (pend.enviados) { $("abrirPdf").click(); }
+  toast("Enviado para a planilha ✓");
+  return true;
+}
 let ultimoEnvio = null; // para a reserva pela página
 function hojeISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function urlPlanilha() { try { return localStorage.getItem(KEY_URL) || ""; } catch (e) { return ""; } }
@@ -1060,10 +1082,9 @@ async function enviar(novaSemana) {
   try {
     r = await chamarScript(url, pedido);
   } catch (e) {
-    ultimoEnvio = { url, pedido, lista };
-    envMsg("Não consegui enviar direto daqui. Normalmente é porque o navegador não está com a conta da empresa ativa. Toque em <b>Enviar pela página da planilha</b>: abre uma página do Google com a sua conta e grava os itens. Quando aparecer <b>Enviado ✓</b>, volte e toque em <b>Confirmar enviado</b>.", true);
-    $("envAcoes").hidden = true; $("envPagina").hidden = false;
-    $("envEnviar").disabled = false; $("envSim").disabled = false; renderFinal(); return;
+    $("envEnviar").disabled = false; $("envSim").disabled = false;
+    const marca = {}; lista.forEach(x => { marca[x.p.k] = fmt(x.ja + x.falta); });
+    irParaPagina(url, pedido, { enviados: marca }); return;
   }
   $("envEnviar").disabled = false; $("envSim").disabled = false; renderFinal();
   if (r && r.outraData) {
@@ -1144,8 +1165,7 @@ $("recebSim").addEventListener("click", async () => {
   try { r = await chamarScript(url, pedido); }
   catch (e) {
     $("recebSim").disabled = false;
-    window.open(urlPagina(url, pedido), "_blank"); marcarRecebido(recebido.id);
-    recebAviso("Não deu para enviar direto. Abri a página da planilha com a sua conta: se apareceu <b>Enviado ✓</b>, está feito."); return;
+    irParaPagina(url, pedido, { recebido: recebido.id }); return;
   }
   $("recebSim").disabled = false;
   if (r && r.outraData) {
@@ -1157,7 +1177,7 @@ $("recebSim").addEventListener("click", async () => {
   const tot = typeof r.total === "number" ? ` · total do dia R$ ${r.total.toFixed(2).replace(".", ",")}` : "";
   toast(`Refeitório enviado para a aba ${r.aba}${tot}`);
 });
-window.addEventListener("hashchange", verRecebido);
+window.addEventListener("hashchange", () => { if (!verRecibo()) verRecebido(); });
 $("envAbrirPag").addEventListener("click", () => { if (ultimoEnvio) window.open(urlPagina(ultimoEnvio.url, ultimoEnvio.pedido), "_blank"); });
 $("envConfirma").addEventListener("click", () => {
   if (!ultimoEnvio) return;
@@ -1449,7 +1469,7 @@ $("fDigitado").addEventListener("click", () => {
   });
   if (mudou) { salvarExtras(); salvar(); salvarCodigos(); montarProdutos(); }
 })();
-chips(); render(); verRecebido();
+chips(); render(); if (!verRecibo()) verRecebido();
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 </script>
 </body>
