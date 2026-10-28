@@ -103,6 +103,24 @@ li.row.has::after{content:"";position:absolute;left:0;top:10px;bottom:10px;width
 .add:focus-visible,.rm:focus-visible,.tira:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .empty .add{border-color:var(--accent);margin-top:16px}
 .rm.ed{color:var(--accent-ink)}
+.rbtn{display:none;align-items:center;justify-content:center;min-width:26px;height:22px;padding:0 7px;border-radius:7px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.02em;cursor:pointer}
+.row.has .rbtn{display:inline-flex}
+.rbtn[aria-pressed="true"]{background:var(--d0);border-color:var(--d0);color:#fff}
+.rbtn[aria-pressed="true"]::after{content:" aproveitamento";font-weight:700;margin-left:3px;text-transform:none}
+.rbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+li.row.r.has{background:linear-gradient(90deg,color-mix(in srgb,var(--d0) 14%,transparent),transparent 75%)}
+li.row.r.has::after{background:var(--d0)}
+.rsplit{display:flex;gap:8px;flex-wrap:wrap}
+.rsplit span{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:6px 10px;border-radius:999px;background:var(--surface-2)}
+.rsplit span b{font-family:var(--display);font-size:16px}
+.rsplit .ra{background:color-mix(in srgb,var(--d0) 16%,transparent)}
+.btn.envio{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;border-color:var(--d0);color:var(--fg);background:color-mix(in srgb,var(--d0) 10%,var(--surface))}
+.envst{font-size:12.5px;color:var(--muted);text-align:center;margin-top:6px}
+.elist{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:14px;max-height:34vh;overflow-y:auto}
+.elist li{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;font-size:14px}
+.elist li+li{border-top:1px solid var(--line)}
+.elist li b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.elist li small{color:var(--muted)}
 .rm{border:0;background:transparent;color:var(--danger);font-size:12.5px;font-weight:600;padding:0 2px;cursor:pointer;text-decoration:underline}
 .lido{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--surface);border-radius:14px;padding:10px 14px;margin-bottom:10px;font-size:13.5px;box-shadow:var(--shadow)}
 .lido code{font-family:ui-monospace,Menlo,monospace;font-size:13px;font-variant-numeric:tabular-nums}
@@ -248,6 +266,8 @@ nav.tabbar .wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bloc
   <section id="viewLanc" hidden><div class="wrap">
     <div class="resumo" id="resumo"></div>
     <button class="btn primary big" id="abrirPdf" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>Imprimir ou gerar PDF</button>
+    <button class="btn envio" id="abrirEnvio" type="button" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>Enviar aproveitamento para a planilha</button>
+    <div class="envst" id="envst" hidden></div>
     <div id="grupos"></div>
     <div class="empty" id="vazioL" hidden><b>Nada lançado ainda</b>Busque o produto ou leia o código de barras e digite a quantidade. Os itens aparecem aqui, separados por estrutura.<br><button class="btn primary" id="irProdutos" type="button">Ir para os produtos</button></div>
     <div class="zerar" id="zonaZerar">
@@ -292,7 +312,7 @@ nav.tabbar .wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bloc
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <h2 id="sheetTitle">Imprimir planilha</h2>
     <div class="grid2" style="grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)">
-      <label class="field"><span>Tipo de lançamento</span><select id="tipo"><option value="AVARIAS">Avarias</option><option value="REAPROVEITAMENTO">Reaproveitamento</option><option value="REFEITÓRIO">Refeitório</option></select></label>
+      <label class="field"><span>Tipo de lançamento</span><select id="tipo"><option value="AVARIAS">Avarias (sem R)</option><option value="APROVEITAMENTO REFEITÓRIO">Aproveitamento refeitório (com R)</option></select></label>
       <label class="field"><span>Data</span><input type="date" id="dataPdf"></label>
     </div>
     <label class="opt"><input type="radio" name="modo" id="modoLancados" value="lancados" checked><div><b>Só os itens lançados</b><span>Mesmo layout da planilha, só com as linhas que têm quantidade.</span></div></label>
@@ -345,6 +365,39 @@ nav.tabbar .wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bloc
     <div class="actions"><button class="btn ghost" id="fFechar" type="button">Fechar</button></div>
   </div>
 </div>
+<div class="sheet" id="envio" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="envioTitle">
+    <h2 id="envioTitle">Enviar aproveitamento</h2>
+    <p>Os itens marcados com <b>R</b> vão para a planilha de aproveitamento do Drive, na aba do dia da semana.</p>
+    <label class="field"><span>Data do aproveitamento</span><input type="date" id="envData"></label>
+    <ul class="elist" id="envLista"></ul>
+    <div class="msg" id="envMsg" hidden></div>
+    <div class="actions" id="envAcoes">
+      <button class="btn ghost" id="envFechar" type="button">Voltar</button>
+      <button class="btn primary" id="envEnviar" type="button">Enviar</button>
+    </div>
+    <div class="actions" id="envForcar" hidden>
+      <button class="btn ghost" id="envNao" type="button">Cancelar</button>
+      <button class="btn danger" id="envSim" type="button" style="border-color:var(--danger)">Apagar e lançar</button>
+    </div>
+    <div class="backup">
+      <span>Sem conexão com a planilha? Copie os itens e cole na coluna <b>Cod. Produto</b> da primeira linha vazia.</span>
+      <div class="actions"><button class="btn ghost" id="envCopiar" type="button">Copiar itens</button><button class="btn ghost" id="envCfg" type="button">Ligar à planilha</button></div>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="cfg" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="cfgTitle">
+    <h2 id="cfgTitle">Ligar à planilha</h2>
+    <p>Cole aqui o endereço do script da planilha de aproveitamento (começa com <b>https://script.google.com/</b>). É feito uma vez só em cada celular.</p>
+    <label class="field"><span>Endereço do script</span><input id="cfgUrl" type="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"></label>
+    <div class="msg" id="cfgMsg" hidden></div>
+    <div class="actions">
+      <button class="btn ghost" id="cfgFechar" type="button">Voltar</button>
+      <button class="btn primary" id="cfgSalvar" type="button">Salvar e testar</button>
+    </div>
+  </div>
+</div>
 <div class="cam" id="cam" hidden>
   <video id="video" playsinline muted autoplay></video>
   <div class="mira" aria-hidden="true"><span></span></div>
@@ -395,6 +448,15 @@ montarProdutos();
 
 function norm(t) { return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase(); }
 
+const KEY_R = "quebra-flv-aprov-v1", KEY_ENV = "quebra-flv-enviados-v1", KEY_URL = "quebra-flv-planilha-url";
+let aprov = {}, enviados = {};
+try { aprov = JSON.parse(localStorage.getItem(KEY_R) || "{}") || {}; } catch (e) { aprov = {}; }
+try { enviados = JSON.parse(localStorage.getItem(KEY_ENV) || "{}") || {}; } catch (e) { enviados = {}; }
+function salvarR() { try { localStorage.setItem(KEY_R, JSON.stringify(aprov)); localStorage.setItem(KEY_ENV, JSON.stringify(enviados)); } catch (e) {} }
+// tipo de lançamento: itens com R = aproveitamento do refeitório; sem R = avarias
+let tipoAtual = "AVARIAS";
+const ehAprov = t => t !== "AVARIAS";
+function qv(k) { return (k in qtd) && (!!aprov[k] === ehAprov(tipoAtual)) ? qtd[k] : ""; }
 let qtd = {};
 try { qtd = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { qtd = {}; }
 function salvar() { try { localStorage.setItem(KEY, JSON.stringify(qtd)); } catch (e) {} }
@@ -451,22 +513,22 @@ function linha(p, lanc) {
   const v = qtd[p.k] || "";
   const u = p.emb.split(" ")[0];
   const est = !lanc && filtro === "todos" ? `<i class="dot d${p.s}" title="${curto[p.s]}"></i>` : "";
-  return `<li class="row${v ? " has" : ""}${lanc ? " l" : ""}" data-k="${p.k}">
+  return `<li class="row${v ? " has" : ""}${lanc ? " l" : ""}${aprov[p.k] ? " r" : ""}" data-k="${p.k}">
       <div><div class="pname">${esc(p.nome)}</div>
-      <div class="pmeta">${est}<span>Cód. ${p.cod}</span>${p.meu ? `<span class="tag ${p.cod.length >= 8 ? "prov" : "meu"}">${p.cod.length >= 8 ? "Código EAN" : "Cadastrado"}</span>${lanc ? "" : `<button class="rm ed" type="button" data-ed="${p.k}">Editar</button><button class="rm" type="button" data-rm="${p.k}">Excluir</button>`}` : ""}</div></div>
+      <div class="pmeta"><button class="rbtn" type="button" data-r="${p.k}" aria-pressed="${!!aprov[p.k]}" aria-label="Aproveitamento refeitório (R)" title="Aproveitamento refeitório">R</button>${est}<span>Cód. ${p.cod}</span>${p.meu ? `<span class="tag ${p.cod.length >= 8 ? "prov" : "meu"}">${p.cod.length >= 8 ? "Código EAN" : "Cadastrado"}</span>${lanc ? "" : `<button class="rm ed" type="button" data-ed="${p.k}">Editar</button><button class="rm" type="button" data-rm="${p.k}">Excluir</button>`}` : ""}</div></div>
       <div class="qty"><button class="plus" type="button" aria-label="Somar mais uma quantidade">+</button><input type="text" inputmode="decimal" enterkeyhint="done" id="${lanc ? "l" : "q"}_${p.s}_${p.cod}" value="${esc(v)}" placeholder="0" aria-label="Quantidade de ${esc(p.nome)}"><span class="u">${u}</span><small class="soma" hidden></small></div>
       ${lanc ? `<button class="tira" type="button" data-tira="${p.k}" aria-label="Tirar ${esc(p.nome)} dos lançados">×</button>` : ""}
     </li>`;
 }
 // totais por estrutura (itens, kg, un)
 function resumoDados() {
-  const g = curto.map(() => ({ n: 0, kg: 0, un: 0 })); let kg = 0, un = 0, n = 0;
+  const g = curto.map(() => ({ n: 0, kg: 0, un: 0 })); let kg = 0, un = 0, n = 0, nr = 0;
   PRODUTOS.forEach(p => {
     if (!(p.k in qtd)) return;
     const v = somar(qtd[p.k]); const ehKg = p.emb.startsWith("KG");
-    g[p.s].n++; n++; if (ehKg) { g[p.s].kg += v; kg += v; } else { g[p.s].un += v; un += v; }
+    g[p.s].n++; n++; if (aprov[p.k]) nr++; if (ehKg) { g[p.s].kg += v; kg += v; } else { g[p.s].un += v; un += v; }
   });
-  return { g, kg, un, n };
+  return { g, kg, un, n, nr };
 }
 const sub = x => [x.kg ? fmt(x.kg) + " kg" : "", x.un ? fmt(x.un) + " un" : ""].filter(Boolean).join(" · ");
 function renderResumo() {
@@ -474,10 +536,12 @@ function renderResumo() {
   $("resumo").innerHTML = `
     <div class="rtop"><div><b class="rnum">${r.n}</b><span>${r.n === 1 ? "item lançado" : "itens lançados"}</span></div>
       <div class="rtot"><span><b>${fmt(r.kg)}</b>kg</span><span><b>${fmt(r.un)}</b>un</span></div></div>
+    ${r.n ? `<div class="rsplit"><span><b>${r.n - r.nr}</b>avarias</span><span class="ra"><b>${r.nr}</b>aproveitamento (R)</span></div>` : ""}
     ${r.n ? `<div class="rbar">${r.g.map((x, i) => x.n ? `<i class="d${i}" style="flex:${x.n}"></i>` : "").join("")}</div>
     <ul class="rleg">${r.g.map((x, i) => x.n ? `<li><i class="dot d${i}"></i><span>${curto[i]}</span><small>${sub(x)}</small><b>${x.n}</b></li>` : "").join("")}</ul>` : ""}`;
   r.g.forEach((x, i) => { const el = document.getElementById("gsub" + i); if (el) el.textContent = `${x.n} ${x.n === 1 ? "item" : "itens"} · ${sub(x) || "0"}`; });
   $("vazioL").hidden = r.n > 0; $("abrirPdf").hidden = false; $("zonaZerar").hidden = !r.n;
+  $("abrirEnvio").hidden = !r.nr; mostrarStatusEnvio();
 }
 function renderLanc() {
   const r = resumoDados();
@@ -598,12 +662,21 @@ function salvarEdicao(cod, nome, emb, s) {
   totais(); toast(aviso);
 }
 $("main").addEventListener("click", e => {
+  const b = e.target.closest("[data-r]"); if (!b) return;
+  const k = b.dataset.r; if (!(k in qtd)) return;
+  if (aprov[k]) delete aprov[k]; else aprov[k] = true;
+  salvarR();
+  b.setAttribute("aria-pressed", String(!!aprov[k])); b.closest("li").classList.toggle("r", !!aprov[k]);
+  toast(aprov[k] ? "Marcado como aproveitamento do refeitório" : "Voltou para avarias");
+  totais();
+});
+$("main").addEventListener("click", e => {
   const b = e.target.closest("[data-ed]"); if (!b) return;
   abrirEdicao(b.dataset.ed);
 });
 $("main").addEventListener("click", e => {
   const b = e.target.closest("[data-tira]"); if (!b) return;
-  delete qtd[b.dataset.tira]; salvar(); renderLanc(); totais(); toast("Item tirado dos lançados");
+  delete qtd[b.dataset.tira]; delete aprov[b.dataset.tira]; salvar(); salvarR(); renderLanc(); totais(); toast("Item tirado dos lançados");
 });
 $("main").addEventListener("click", e => {
   const b = e.target.closest("[data-rm]"); if (!b) return;
@@ -621,7 +694,7 @@ $("main").addEventListener("input", e => {
   let v = inp.value.replace(/\./g, ",").replace(/[^\d,+]/g, "").replace(/\+{2,}/g, "+").replace(/^\+/, "");
   if (v !== inp.value) inp.value = v;
   const total = somar(v);
-  if (total > 0) qtd[k] = fmt(total); else delete qtd[k];
+  if (total > 0) qtd[k] = fmt(total); else { delete qtd[k]; if (aprov[k]) { delete aprov[k]; salvarR(); } }
   const sm = li.querySelector(".soma");
   if (v.includes("+") && total > 0) { sm.hidden = false; sm.textContent = "= " + fmt(total); } else sm.hidden = true;
   li.classList.toggle("has", k in qtd);
@@ -655,19 +728,20 @@ $("abrirPdf").addEventListener("click", () => {
   const n = Object.keys(qtd).length;
   if (!n) { $("modoCompleto").checked = true; msg("Ainda não há quantidades lançadas. Você pode baixar a planilha em branco."); }
   if (!$("dataPdf").value) { const d = new Date(); $("dataPdf").value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
-  try { const tp = localStorage.getItem("quebra-flv-tipo"); if (tp) $("tipo").value = tp; } catch (e) {}
+  $("tipo").value = "AVARIAS";
   $("sheet").hidden = false;
 });
 $("fechar").addEventListener("click", () => $("sheet").hidden = true);
 $("sheet").addEventListener("click", e => { if (e.target.id === "sheet") $("sheet").hidden = true; });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { ["sheet", "novo", "vinc", "falha"].forEach(id => $(id).hidden = true); if (rodando || !$("cam").hidden) fecharCamera(); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { ["sheet", "novo", "vinc", "falha", "envio", "cfg"].forEach(id => $(id).hidden = true); if (rodando || !$("cam").hidden) fecharCamera(); } });
 $("limpar").addEventListener("click", () => { $("zonaLimpar").hidden = true; $("confirmaLimpar").hidden = false; });
 $("naoLimpar").addEventListener("click", () => { $("zonaLimpar").hidden = false; $("confirmaLimpar").hidden = true; });
 $("simLimpar").addEventListener("click", () => {
-  qtd = {}; salvar(); $("sheet").hidden = true; renderLanc(); totais(); toast("Lançamentos zerados");
+  qtd = {}; aprov = {}; enviados = {}; salvar(); salvarR(); $("sheet").hidden = true; renderLanc(); totais(); toast("Lançamentos zerados");
 });
 
 function gerarPDF(modo, tipo, dataBR) {
+  tipoAtual = tipo;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const L = 13, W = 184, top = 21.3, rowH = 4.15;
@@ -676,8 +750,8 @@ function gerarPDF(modo, tipo, dataBR) {
   const corpo = [], usadas = [];
   ABAS.forEach((aba, s) => {
     const linhas = itensDaAba(s)
-      .filter(([cod]) => modo === "completo" || (s + ":" + cod) in qtd)
-      .map(([cod, nome, emb]) => [cod, nome, emb, qtd[s + ":" + cod] || ""]);
+      .filter(([cod]) => modo === "completo" || qv(s + ":" + cod))
+      .map(([cod, nome, emb]) => [cod, nome, emb, qv(s + ":" + cod)]);
     if (!linhas.length) return;
     usadas.push(aba.estrutura.replace(/^ESTRUTURA MERCADOLÓGICA:\s*/i, ""));
     corpo.push([{ content: aba.estrutura, colSpan: 4, styles: { fillColor: [217, 217, 217], fontStyle: "bold", halign: "left" } }]);
@@ -718,9 +792,10 @@ function preparar() {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) { msg("Escolha a data do lançamento.", true); $("dataPdf").focus(); return null; }
   const [aa, mm, dd] = iso.split("-");
   try { localStorage.setItem("quebra-flv-tipo", tipo); } catch (e) {}
-  const temItens = modo === "completo" || Object.keys(qtd).length > 0;
-  if (!temItens) { msg("Nenhum item com quantidade. Escolha “Planilha completa” ou lance alguma quebra.", true); return null; }
-  return { modo, tipo, dataBR: `${dd}/${mm}/${aa}`, nome: `${$("tipo").selectedOptions[0].text} FLV ${dd}-${mm}-${aa}.pdf` };
+  tipoAtual = tipo;
+  const temItens = modo === "completo" || Object.keys(qtd).some(k => qv(k));
+  if (!temItens) { msg(tipo === "AVARIAS" ? "Nenhum item de avaria (sem R) lançado." : "Nenhum item marcado com R para aproveitamento.", true); return null; }
+  return { modo, tipo, dataBR: `${dd}/${mm}/${aa}`, nome: `${tipo === "AVARIAS" ? "Avarias" : "Aproveitamento refeitorio"} FLV ${dd}-${mm}-${aa}.pdf` };
 }
 function fazerPDF(p) {
   if (!window.jspdf) { msg("O gerador de PDF não carregou. Abra o app de novo com internet uma vez.", true); return null; }
@@ -730,11 +805,11 @@ function fazerPDF(p) {
 function montarImpressao(p) {
   const secoes = [], usadas = [];
   ABAS.forEach((aba, s) => {
-    const linhas = itensDaAba(s).filter(([cod]) => p.modo === "completo" || (s + ":" + cod) in qtd);
+    const linhas = itensDaAba(s).filter(([cod]) => p.modo === "completo" || qv(s + ":" + cod));
     if (!linhas.length) return;
     usadas.push(aba.estrutura.replace(/^ESTRUTURA MERCADOLÓGICA:\s*/i, ""));
     secoes.push(`<tr class="sec"><td colspan="4">${esc(aba.estrutura)}</td></tr>` + linhas.map(([cod, nome, emb]) =>
-      `<tr><td class="c">${cod}</td><td>${esc(nome)}</td><td>${esc(emb)}</td><td class="q">${esc(qtd[s + ":" + cod] || "")}</td></tr>`).join(""));
+      `<tr><td class="c">${cod}</td><td>${esc(nome)}</td><td>${esc(emb)}</td><td class="q">${esc(qv(s + ":" + cod))}</td></tr>`).join(""));
   });
   const cab = ["DONA MERCADO, HORTIFRUTI & ADEGA", "DEPARTAMENTO DE PREVENÇÃO DE PERDAS", "PLANILHA PADRÃO PARA LANÇAMENTOS DE " + p.tipo, "SETOR: HORTIFRUTI",
     "ESTRUTURA MERCADOLÓGICA: " + usadas.join(" / "), "DATA: " + p.dataBR];
@@ -788,6 +863,96 @@ $("importar").addEventListener("change", async () => {
     toast(`Importado: ${nl} lançamentos, ${np} produtos, ${nc} códigos`);
   } catch (e) { msg("Esse arquivo não é um backup do Quebra FLV.", true); }
   $("importar").value = "";
+});
+
+// ---- envio do aproveitamento para a planilha do Google Drive ----
+function hojeISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function urlPlanilha() { try { return localStorage.getItem(KEY_URL) || ""; } catch (e) { return ""; } }
+// o que falta enviar: itens com R, descontando o que já foi enviado antes
+function aEnviar() {
+  return PRODUTOS.filter(p => aprov[p.k] && p.k in qtd).map(p => {
+    const total = somar(qtd[p.k]), ja = enviados[p.k] ? somar(enviados[p.k]) : 0;
+    return { p, falta: Math.round((total - ja) * 1000) / 1000, ja, total };
+  });
+}
+function mostrarStatusEnvio() {
+  const el = $("envst"); if (!el) return;
+  const l = aEnviar(), pend = l.filter(x => x.falta > 0).length, enviadosN = l.filter(x => x.ja > 0 && x.falta <= 0).length;
+  el.hidden = !l.length;
+  el.textContent = !l.length ? "" : pend ? (enviadosN ? `${pend} ${pend === 1 ? "item ainda não enviado" : "itens ainda não enviados"} · ${enviadosN} já enviados` : `${pend} ${pend === 1 ? "item para enviar" : "itens para enviar"}`) : "Tudo enviado para a planilha ✓";
+}
+function envMsg(m, err) { $("envMsg").hidden = !m; $("envMsg").innerHTML = m || ""; $("envMsg").classList.toggle("err", !!err); }
+function abrirEnvio() {
+  if (!$("envData").value) $("envData").value = hojeISO();
+  const l = aEnviar();
+  $("envLista").innerHTML = l.map(x => `<li><span>${esc(x.p.nome)}<br><small>Cód. ${x.p.cod}${x.ja > 0 ? ` · já enviado ${fmt(x.ja)}` : ""}</small></span><b>${x.falta > 0 ? fmt(x.falta) + " " + x.p.emb.split(" ")[0].toLowerCase() : x.falta < 0 ? "diminuiu" : "enviado ✓"}</b></li>`).join("");
+  const neg = l.filter(x => x.falta < 0);
+  envMsg(neg.length ? `Depois de enviado, a quantidade diminuiu em: ${neg.map(x => esc(x.p.nome)).join(", ")}. Corrija esses direto na planilha.` : "", !!neg.length);
+  $("envAcoes").hidden = false; $("envForcar").hidden = true;
+  $("envEnviar").disabled = !l.some(x => x.falta > 0);
+  $("envio").hidden = false;
+}
+async function enviar(novaSemana) {
+  const url = urlPlanilha();
+  if (!url) { $("envio").hidden = true; abrirCfg(); return; }
+  const iso = $("envData").value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) { envMsg("Escolha a data.", true); return; }
+  const lista = aEnviar().filter(x => x.falta > 0);
+  if (!lista.length) { envMsg("Não há itens novos para enviar."); return; }
+  const itens = lista.map(x => ({ cod: x.p.cod, desc: x.p.nome, qtd: x.falta, emb: x.p.emb.split(" ")[0] }));
+  $("envEnviar").disabled = true; $("envSim").disabled = true; envMsg("Enviando…");
+  let r;
+  try {
+    const resp = await fetch(url, { method: "POST", body: JSON.stringify({ acao: "lancar", data: iso, itens, novaSemana: !!novaSemana }) });
+    r = await resp.json();
+  } catch (e) {
+    envMsg("Não consegui falar com a planilha. Confira a internet. Se estiver usando a versão dentro do Claude, envie pelo app instalado (lincoln201.github.io/quebra-flv).", true);
+    $("envEnviar").disabled = false; $("envSim").disabled = false; return;
+  }
+  $("envEnviar").disabled = false; $("envSim").disabled = false;
+  if (r && r.outraData) {
+    envMsg(`A aba <b>${esc(r.aba)}</b> da planilha ainda está com a data <b>${esc(r.abaData || "anterior")}</b> e tem itens de outra semana. Para lançar este dia, os itens antigos dessa aba serão apagados (o Google Planilhas guarda o histórico de versões).`, true);
+    $("envAcoes").hidden = true; $("envForcar").hidden = false; return;
+  }
+  if (!r || !r.ok) { envMsg("A planilha respondeu com erro: " + esc((r && r.erro) || "desconhecido"), true); return; }
+  const gravados = new Set((r.gravados || []).map(String));
+  lista.forEach(x => { if (gravados.has(x.p.cod)) enviados[x.p.k] = fmt(x.ja + x.falta); });
+  salvarR(); mostrarStatusEnvio();
+  const tot = typeof r.total === "number" ? ` · total do dia na planilha: R$ ${r.total.toFixed(2).replace(".", ",")}` : "";
+  if (r.naoCouberam && r.naoCouberam.length) {
+    envMsg(`Enviados ${gravados.size} itens para a aba ${esc(r.aba)}${tot}. Não couberam (aba cheia): ${r.naoCouberam.map(esc).join(", ")}.`, true);
+  } else {
+    $("envio").hidden = true; toast(`Enviado para a aba ${r.aba}${tot}`);
+  }
+  renderResumo();
+}
+$("abrirEnvio").addEventListener("click", abrirEnvio);
+$("envFechar").addEventListener("click", () => $("envio").hidden = true);
+$("envio").addEventListener("click", e => { if (e.target.id === "envio") $("envio").hidden = true; });
+$("envEnviar").addEventListener("click", () => enviar(false));
+$("envSim").addEventListener("click", () => enviar(true));
+$("envNao").addEventListener("click", () => { $("envAcoes").hidden = false; $("envForcar").hidden = true; envMsg(""); });
+$("envCopiar").addEventListener("click", async () => {
+  const l = aEnviar().filter(x => x.falta > 0);
+  const txt = l.map(x => `${x.p.cod}\t${x.p.nome}\t${fmt(x.falta)}`).join("\n");
+  try { await navigator.clipboard.writeText(txt); envMsg(`${l.length} itens copiados. Na planilha, clique na primeira célula vazia de <b>Cod. Produto</b> e cole. Como o app não sabe se você colou, eles continuam aparecendo como “para enviar”.`); }
+  catch (e) { envMsg("Não deu para copiar neste aparelho.", true); }
+});
+function abrirCfg() { $("cfgUrl").value = urlPlanilha(); $("cfgMsg").hidden = true; $("cfg").hidden = false; $("cfgUrl").focus(); }
+$("envCfg").addEventListener("click", () => { $("envio").hidden = true; abrirCfg(); });
+$("cfgFechar").addEventListener("click", () => $("cfg").hidden = true);
+$("cfgSalvar").addEventListener("click", async () => {
+  const u = $("cfgUrl").value.trim(), m = $("cfgMsg");
+  m.hidden = false; m.classList.remove("err");
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec/.test(u)) { m.classList.add("err"); m.textContent = "Esse endereço não parece o do script. Ele termina com /exec."; return; }
+  m.textContent = "Testando…";
+  try {
+    const r = await (await fetch(u, { method: "POST", body: JSON.stringify({ acao: "teste" }) })).json();
+    if (!r.ok) throw new Error(r.erro || "erro");
+    try { localStorage.setItem(KEY_URL, u); } catch (e) {}
+    m.textContent = `Ligado à planilha “${r.planilha}” ✓`;
+    setTimeout(() => { $("cfg").hidden = true; if (aEnviar().some(x => x.falta > 0)) abrirEnvio(); }, 900);
+  } catch (e) { m.classList.add("err"); m.textContent = "Não consegui conectar. Confira se o script foi implantado com acesso para “Qualquer pessoa” e se o endereço está completo."; }
 });
 
 // ---- leitura de código de barras (foto) ----
