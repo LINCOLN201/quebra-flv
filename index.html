@@ -357,7 +357,6 @@ input[type=date][readonly]{pointer-events:none;opacity:.85}
         <button class="btn fb benv" type="button" id="fEnviar">Enviar para a planilha</button>
         <button class="btn fb" type="button" id="fLider">Mandar para o líder</button>
       </div>
-      <div class="flinks"><button class="lnk" type="button" id="fCfg">Ligar este celular à planilha (só líder)</button><button class="lnk" type="button" id="fFone">WhatsApp do líder</button></div>
     </section>
 
     <div class="msg" id="pdfMsg" hidden></div>
@@ -814,8 +813,8 @@ function renderFinal() {
   sAp.textContent = !nAp ? "nenhum item" : !pend ? "✓ enviado" : feito.lider && !ligado ? `✓ mandado ${feito.lider}` : `${pend} para enviar`;
   sAp.classList.toggle("ok", !!(nAp && (!pend || (feito.lider && !ligado))));
   // celular ligado à planilha: Enviar em destaque; senão, Mandar para o líder
-  $("fEnviar").hidden = !ligado; $("fLider").classList.toggle("lider1", !ligado);
-  $("fEnviar").disabled = !pend; $("fCfg").hidden = ligado;
+  $("fEnviar").hidden = !ligado; $("fLider").hidden = ligado; $("fLider").classList.toggle("lider1", !ligado);
+  $("fEnviar").disabled = !pend;
 }
 $("abrirPdf").addEventListener("click", () => {
   msg(""); $("fZerarConf").hidden = true; $("fZerar").hidden = false;
@@ -833,7 +832,6 @@ $("sheet").addEventListener("click", e => {
   if (fn) fn(b.dataset.tipo);
 });
 $("fEnviar").addEventListener("click", () => { $("dataPdf").value = $("envData").value = hojeISO(); enviar(false); });
-$("fCfg").addEventListener("click", () => { $("sheet").hidden = true; abrirCfg(); });
 $("fCfg2").addEventListener("click", () => { $("sheet").hidden = true; abrirCfg(); });
 $("fZerar").addEventListener("click", () => { $("fZerar").hidden = true; $("fZerarConf").hidden = false; });
 $("fZerarNao").addEventListener("click", () => { $("fZerar").hidden = false; $("fZerarConf").hidden = true; });
@@ -1114,22 +1112,7 @@ $("abrirEnvio").addEventListener("click", () => { if (urlPlanilha()) abrirEnvio(
 const APP_URL = "https://lincoln201.github.io/quebra-flv/";
 function b64url(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function deB64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return JSON.parse(decodeURIComponent(escape(atob(s)))); }
-const KEY_FONE = "quebra-flv-lider-fone";
-const LIDER_FONE_PADRAO = "5561982158778";
-function foneLider() { try { return localStorage.getItem(KEY_FONE) || LIDER_FONE_PADRAO; } catch (e) { return LIDER_FONE_PADRAO; } }
-function pedirFone() {
-  const v = prompt("WhatsApp do líder (com DDD). Ex.: 61 99999-9999", foneLider().replace(/^55/, ""));
-  if (v === null) return null;
-  let d = v.replace(/\D/g, "");
-  if (!d) { try { localStorage.removeItem(KEY_FONE); } catch (e) {} return ""; }
-  if (d.length === 10 || d.length === 11) d = "55" + d;
-  if (d.length < 12) { msg("Número incompleto. Coloque o DDD + número.", true); return null; }
-  try { localStorage.setItem(KEY_FONE, d); } catch (e) {}
-  return d;
-}
-$("fFone").addEventListener("click", () => { const d = pedirFone(); if (d) toast("WhatsApp do líder salvo: +" + d); renderFone(); });
-function renderFone() { const f = foneLider(); $("fFone").textContent = f ? "WhatsApp do líder: +" + f.slice(0, 2) + " " + f.slice(2, 4) + " " + f.slice(4) + " (trocar)" : "Cadastrar WhatsApp do líder"; }
-renderFone();
+const LIDER_FONE = "5561982158778"; // WhatsApp do líder (fixo)
 $("fLider").addEventListener("click", () => mandarLider(false));
 async function mandarLider(daTela) {
   const aviso = (m, err) => daTela ? toast(m) : msg(m, err);
@@ -1140,17 +1123,10 @@ async function mandarLider(daTela) {
   const link = APP_URL + "#lider=" + b64url({ v: 1, id, data: iso, itens });
   const [aa, mm, dd] = iso.split("-");
   const texto = `Aproveitamento refeitório ${dd}/${mm} – ${itens.length} ${itens.length === 1 ? "item" : "itens"} (Quebra FLV). Abra no celular do líder para enviar à planilha: ${link}`;
-  let fone = foneLider();
-  if (!fone) { fone = pedirFone(); renderFone(); if (fone === null) return; }
-  let foi = false;
-  if (!fone && navigator.share) { try { await navigator.share({ title: "Aproveitamento refeitório", text: texto }); foi = true; } catch (e) { if (e && e.name === "AbortError") return; } }
-  if (!foi) {
-    const a = document.createElement("a"); a.href = "https://wa.me/" + (fone || "") + "?text=" + encodeURIComponent(texto); a.target = "_blank"; a.rel = "noopener";
-    document.body.appendChild(a); a.click(); a.remove();
-    try { await navigator.clipboard.writeText(texto); } catch (e) {}
-  }
+  const a = document.createElement("a"); a.href = "https://wa.me/" + LIDER_FONE + "?text=" + encodeURIComponent(texto); a.target = "_blank"; a.rel = "noopener";
+  document.body.appendChild(a); a.click(); a.remove();
   marcarFeito("lider");
-  aviso(daTela ? "Mensagem pronta no WhatsApp do líder. É só tocar em enviar." : "Mensagem pronta para o WhatsApp do líder. Ele abre o link no celular dele e toca em Enviar: a cópia do refeitório vai para a planilha.");
+  aviso("Mensagem pronta no WhatsApp do líder. É só tocar em enviar.");
 }
 // celular do líder: abrir o link recebido
 let recebido = null;
