@@ -22,5 +22,5 @@ O script `apps-script/Aproveitamento.gs` fica dentro da planilha do Google e gra
 Instalação (uma vez):
 1. Abra a planilha no Google Planilhas → **Extensões → Apps Script**.
 2. Apague o que estiver no editor, cole o conteúdo de `Aproveitamento.gs` e salve.
-3. **Implantar → Nova implantação** → tipo **App da Web** → Executar como **Eu** → Quem pode acessar **Qualquer pessoa** → Implantar → autorize.
+3. **Implantar → Nova implantação** → tipo **App da Web** → Executar como **Eu** → Quem pode acessar **Qualquer pessoa** (na conta da empresa: **Qualquer pessoa em Dona de Casa Supermercados**; aí o celular precisa estar logado nessa conta no Chrome) → Implantar → autorize.
 4. Copie o endereço que termina em `/exec` e cole no app em **Enviar aproveitamento → Ligar à planilha**.

@@ -376,6 +376,10 @@ nav.tabbar .wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bloc
       <button class="btn ghost" id="envFechar" type="button">Voltar</button>
       <button class="btn primary" id="envEnviar" type="button">Enviar</button>
     </div>
+    <div class="actions" id="envPagina" hidden>
+      <button class="btn primary" id="envAbrirPag" type="button">Enviar pela página da planilha</button>
+      <button class="btn ghost" id="envConfirma" type="button">Confirmar enviado</button>
+    </div>
     <div class="actions" id="envForcar" hidden>
       <button class="btn ghost" id="envNao" type="button">Cancelar</button>
       <button class="btn danger" id="envSim" type="button" style="border-color:var(--danger)">Apagar e lançar</button>
@@ -866,6 +870,27 @@ $("importar").addEventListener("change", async () => {
 });
 
 // ---- envio do aproveitamento para a planilha do Google Drive ----
+const RX_SCRIPT = /^https:\/\/script\.google\.com\/(?:a\/macros\/[\w.-]+|macros)\/s\/[\w-]+\/exec$/;
+function codificar(obj) {
+  const b = btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  return encodeURIComponent(b.replace(/\+/g, "-").replace(/\//g, "_"));
+}
+// Chama o script da planilha com o login do navegador (a planilha é restrita à empresa).
+function chamarScript(url, obj) {
+  return new Promise((ok, erro) => {
+    const nome = "qflv_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
+    const s = document.createElement("script");
+    let fim = false;
+    const limpa = () => { fim = true; delete window[nome]; s.remove(); clearTimeout(tm); };
+    window[nome] = r => { limpa(); ok(r); };
+    s.onerror = () => { if (!fim) { limpa(); erro(new Error("sem acesso")); } };
+    const tm = setTimeout(() => { if (!fim) { limpa(); erro(new Error("tempo")); } }, 30000);
+    s.src = `${url}?d=${codificar(obj)}&callback=${nome}`;
+    document.head.appendChild(s);
+  });
+}
+function urlPagina(url, obj) { return `${url}?d=${codificar(obj)}&volta=${encodeURIComponent(location.href.split("#")[0])}`; }
+let ultimoEnvio = null; // para a reserva pela página
 function hojeISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function urlPlanilha() { try { return localStorage.getItem(KEY_URL) || ""; } catch (e) { return ""; } }
 // o que falta enviar: itens com R, descontando o que já foi enviado antes
@@ -888,7 +913,7 @@ function abrirEnvio() {
   $("envLista").innerHTML = l.map(x => `<li><span>${esc(x.p.nome)}<br><small>Cód. ${x.p.cod}${x.ja > 0 ? ` · já enviado ${fmt(x.ja)}` : ""}</small></span><b>${x.falta > 0 ? fmt(x.falta) + " " + x.p.emb.split(" ")[0].toLowerCase() : x.falta < 0 ? "diminuiu" : "enviado ✓"}</b></li>`).join("");
   const neg = l.filter(x => x.falta < 0);
   envMsg(neg.length ? `Depois de enviado, a quantidade diminuiu em: ${neg.map(x => esc(x.p.nome)).join(", ")}. Corrija esses direto na planilha.` : "", !!neg.length);
-  $("envAcoes").hidden = false; $("envForcar").hidden = true;
+  $("envAcoes").hidden = false; $("envForcar").hidden = true; $("envPagina").hidden = true;
   $("envEnviar").disabled = !l.some(x => x.falta > 0);
   $("envio").hidden = false;
 }
@@ -902,11 +927,13 @@ async function enviar(novaSemana) {
   const itens = lista.map(x => ({ cod: x.p.cod, desc: x.p.nome, qtd: x.falta, emb: x.p.emb.split(" ")[0] }));
   $("envEnviar").disabled = true; $("envSim").disabled = true; envMsg("Enviando…");
   let r;
+  const pedido = { acao: "lancar", data: iso, itens, novaSemana: !!novaSemana };
   try {
-    const resp = await fetch(url, { method: "POST", body: JSON.stringify({ acao: "lancar", data: iso, itens, novaSemana: !!novaSemana }) });
-    r = await resp.json();
+    r = await chamarScript(url, pedido);
   } catch (e) {
-    envMsg("Não consegui falar com a planilha. Confira a internet. Se estiver usando a versão dentro do Claude, envie pelo app instalado (lincoln201.github.io/quebra-flv).", true);
+    ultimoEnvio = { url, pedido, lista };
+    envMsg("Não consegui enviar direto daqui. Normalmente é porque o navegador não está com a conta da empresa ativa. Toque em <b>Enviar pela página da planilha</b>: abre uma página do Google com a sua conta e grava os itens. Quando aparecer <b>Enviado ✓</b>, volte e toque em <b>Confirmar enviado</b>.", true);
+    $("envAcoes").hidden = true; $("envPagina").hidden = false;
     $("envEnviar").disabled = false; $("envSim").disabled = false; return;
   }
   $("envEnviar").disabled = false; $("envSim").disabled = false;
@@ -927,6 +954,12 @@ async function enviar(novaSemana) {
   renderResumo();
 }
 $("abrirEnvio").addEventListener("click", abrirEnvio);
+$("envAbrirPag").addEventListener("click", () => { if (ultimoEnvio) window.open(urlPagina(ultimoEnvio.url, ultimoEnvio.pedido), "_blank"); });
+$("envConfirma").addEventListener("click", () => {
+  if (!ultimoEnvio) return;
+  ultimoEnvio.lista.forEach(x => { enviados[x.p.k] = fmt(x.ja + x.falta); });
+  salvarR(); ultimoEnvio = null; $("envio").hidden = true; renderResumo(); toast("Marcado como enviado");
+});
 $("envFechar").addEventListener("click", () => $("envio").hidden = true);
 $("envio").addEventListener("click", e => { if (e.target.id === "envio") $("envio").hidden = true; });
 $("envEnviar").addEventListener("click", () => enviar(false));
@@ -944,15 +977,18 @@ $("cfgFechar").addEventListener("click", () => $("cfg").hidden = true);
 $("cfgSalvar").addEventListener("click", async () => {
   const u = $("cfgUrl").value.trim(), m = $("cfgMsg");
   m.hidden = false; m.classList.remove("err");
-  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec/.test(u)) { m.classList.add("err"); m.textContent = "Esse endereço não parece o do script. Ele termina com /exec."; return; }
+  if (!RX_SCRIPT.test(u)) { m.classList.add("err"); m.textContent = "Esse endereço não parece o do script. Ele começa com https://script.google.com/ e termina com /exec."; return; }
+  try { localStorage.setItem(KEY_URL, u); } catch (e) {}
   m.textContent = "Testando…";
   try {
-    const r = await (await fetch(u, { method: "POST", body: JSON.stringify({ acao: "teste" }) })).json();
+    const r = await chamarScript(u, { acao: "teste" });
     if (!r.ok) throw new Error(r.erro || "erro");
-    try { localStorage.setItem(KEY_URL, u); } catch (e) {}
     m.textContent = `Ligado à planilha “${r.planilha}” ✓`;
     setTimeout(() => { $("cfg").hidden = true; if (aEnviar().some(x => x.falta > 0)) abrirEnvio(); }, 900);
-  } catch (e) { m.classList.add("err"); m.textContent = "Não consegui conectar. Confira se o script foi implantado com acesso para “Qualquer pessoa” e se o endereço está completo."; }
+  } catch (e) {
+    m.classList.add("err");
+    m.innerHTML = `Endereço salvo, mas não consegui confirmar daqui. Abra <a href="${esc(urlPagina(u, { acao: "teste" }))}" target="_blank" rel="noopener">este teste</a> com a conta da empresa: se aparecer <b>Ligado ✓</b>, está tudo certo.`;
+  }
 });
 
 // ---- leitura de código de barras (foto) ----
