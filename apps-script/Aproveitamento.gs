@@ -118,12 +118,10 @@ function lancar(ss, req) {
   var n = ULTIMA_LINHA - PRIMEIRA_LINHA + 1;
   var colB = sh.getRange(PRIMEIRA_LINHA, 2, n, 1).getValues();
   var ocupadas = colB.filter(function (r) { return r[0] !== "" && r[0] !== null; }).length;
-  if (!mesmaData && ocupadas > 0 && !req.novaSemana) {
-    return { ok: false, outraData: true, aba: nomeAba,
-             abaData: atual instanceof Date ? Utilities.formatDate(atual, tz, "dd/MM/yyyy") : String(atual || "") };
-  }
+  // Aba com outro dia (semana passada): guarda no HISTÓRICO, limpa e lança o dia de hoje — sem perguntar.
+  // (a data já é travada no dia de hoje, então outra data na aba só pode ser de semana anterior)
   if (!mesmaData) {
-    if (ocupadas > 0) limparAba(sh);
+    if (ocupadas > 0) { arquivar_(ss, sh, atual, tz); limparAba(sh); }
     sh.getRange(CELULA_DATA).setValue(dataNaPlanilha(ss, partes[0], partes[1], partes[2]));
     colB = sh.getRange(PRIMEIRA_LINHA, 2, n, 1).getValues();
   }
@@ -168,6 +166,25 @@ function iniciarSemana(ss, req) {
   });
   SpreadsheetApp.flush();
   return { ok: true, abas: feitas, segunda: Utilities.formatDate(seg, ss.getSpreadsheetTimeZone(), "dd/MM/yyyy") };
+}
+
+// Copia as linhas lançadas de uma aba de dia para a aba HISTÓRICO antes de limpar.
+function arquivar_(ss, sh, dataAba, tz) {
+  var n = ULTIMA_LINHA - PRIMEIRA_LINHA + 1;
+  var vals = sh.getRange(PRIMEIRA_LINHA, 2, n, 5).getValues(); // B..F: código, descrição, qtd, custo, total
+  var dataTxt = dataAba instanceof Date ? Utilities.formatDate(dataAba, tz, "dd/MM/yyyy") : String(dataAba || "");
+  var agora = Utilities.formatDate(new Date(), tz, "dd/MM/yyyy HH:mm");
+  var linhas = vals.filter(function (r) { return r[0] !== "" && r[0] !== null; })
+    .map(function (r) { return [dataTxt, sh.getName(), r[0], r[1], r[2], r[3], r[4], agora]; });
+  if (!linhas.length) return;
+  var h = ss.getSheetByName("HISTÓRICO");
+  if (!h) {
+    h = ss.insertSheet("HISTÓRICO");
+    h.appendRow(["Data", "Dia", "Cód. Produto", "Descrição", "Quantidade", "Preço de custo", "Valor total", "Arquivado em"]);
+    h.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#92d050");
+    h.setFrozenRows(1);
+  }
+  h.getRange(h.getLastRow() + 1, 1, linhas.length, 8).setValues(linhas);
 }
 
 // Meia-noite do dia no fuso da planilha (evita a data aparecer um dia antes).
