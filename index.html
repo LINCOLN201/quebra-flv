@@ -361,13 +361,9 @@ input[type=date][readonly]{pointer-events:none;opacity:.85}
 
     <div class="msg" id="pdfMsg" hidden></div>
 
-    <details class="mais">
-      <summary>Mais opções</summary>
-      <div class="maisc">
-        <label class="opt"><input type="radio" name="modo" id="modoLancados" value="lancados" checked><div><b>Só os itens lançados</b><span>O normal: só as linhas com quantidade.</span></div></label>
-        <label class="opt"><input type="radio" name="modo" id="modoCompleto" value="completo"><div><b>Planilha completa</b><span>Todos os produtos, com as quantidades preenchidas.</span></div></label>
-        <div class="flinks"><span class="fsep">Papel separado:</span><button class="lnk bpdf" type="button" data-tipo="AVARIAS">PDF só avarias</button><button class="lnk bpdf" type="button" data-tipo="APROVEITAMENTO REFEITÓRIO">PDF só refeitório</button></div>
-        <button class="btn ghost" type="button" id="fCfg2">Ligar este celular à planilha do refeitório</button>
+    <div hidden>
+      <input type="radio" name="modo" id="modoLancados" value="lancados" checked>
+      <input type="radio" name="modo" id="modoCompleto" value="completo">
         <div class="backup">
           <span>Backup dos dados (lançamentos, produtos cadastrados e códigos ligados)</span>
           <div class="actions">
@@ -376,8 +372,8 @@ input[type=date][readonly]{pointer-events:none;opacity:.85}
             <input type="file" id="importar" class="vh" accept=".json,application/json">
           </div>
         </div>
-      </div>
-    </details>
+    </div>
+    <div class="flinks" id="fDeslBox" hidden><button class="lnk" type="button" id="fDesl">Desconectar este celular da planilha</button></div>
 
     <div class="actions">
       <button class="btn ghost" id="fechar" type="button">Voltar</button>
@@ -798,7 +794,7 @@ function msg(m, err) { const el = $("pdfMsg"); el.hidden = !m; el.textContent = 
 const KEY_FEITO = "quebra-flv-feito-v1";
 let feito = {};
 try { feito = JSON.parse(localStorage.getItem(KEY_FEITO) || "{}") || {}; } catch (e) { feito = {}; }
-function marcarFeito(chave) { feito[chave] = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); try { localStorage.setItem(KEY_FEITO, JSON.stringify(feito)); } catch (e) {} renderFinal(); }
+function marcarFeito(chave) { feito[chave] = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); try { localStorage.setItem(KEY_FEITO, JSON.stringify(feito)); } catch (e) {} renderFinal(); mostrarStatusEnvio(); }
 function renderFinal() {
   const ks = Object.keys(qtd), nAp = ks.filter(k => aprov[k]).length, nAv = ks.length - nAp;
   const nT = ks.length;
@@ -815,6 +811,8 @@ function renderFinal() {
   // celular ligado à planilha: Enviar em destaque; senão, Mandar para o líder
   $("fEnviar").hidden = !ligado; $("fLider").hidden = ligado; $("fLider").classList.toggle("lider1", !ligado);
   $("fEnviar").disabled = !pend;
+  // celular do colega: o cartão 2 some (ele manda pelo botão verde da tela de lançados)
+  $("fcAp").hidden = !ligado; $("fDeslBox").hidden = !ligado;
 }
 $("abrirPdf").addEventListener("click", () => {
   msg(""); $("fZerarConf").hidden = true; $("fZerar").hidden = false;
@@ -832,8 +830,19 @@ $("sheet").addEventListener("click", e => {
   if (fn) fn(b.dataset.tipo);
 });
 $("fEnviar").addEventListener("click", () => { $("dataPdf").value = $("envData").value = hojeISO(); enviar(false); });
-$("fCfg2").addEventListener("click", () => { $("sheet").hidden = true; abrirCfg(); });
-$("fZerar").addEventListener("click", () => { $("fZerar").hidden = true; $("fZerarConf").hidden = false; });
+$("fDesl").addEventListener("click", () => {
+  if (!confirm("Desconectar este celular da planilha? Ele passa a mandar o aproveitamento para o líder pelo WhatsApp.")) return;
+  try { localStorage.removeItem(KEY_URL); } catch (e) {}
+  renderFinal(); renderResumo(); toast("Celular desconectado da planilha");
+});
+$("fZerar").addEventListener("click", () => {
+  $("fZerar").hidden = true; $("fZerarConf").hidden = false;
+  // aviso para não perder o aproveitamento antes de zerar
+  const nAp = Object.keys(qtd).filter(k => aprov[k]).length, ligado = !!urlPlanilha();
+  const pend = aEnviar().filter(x => x.falta > 0).length;
+  if (nAp && !ligado && !feito.lider) msg("Atenção: o aproveitamento (R) ainda não foi mandado para o líder.", true);
+  else if (nAp && ligado && pend) msg("Atenção: ainda tem aproveitamento (R) que não foi enviado para a planilha.", true);
+});
 $("fZerarNao").addEventListener("click", () => { $("fZerar").hidden = false; $("fZerarConf").hidden = true; });
 $("fZerarSim").addEventListener("click", () => $("simLimpar").click());
 $("fechar").addEventListener("click", () => $("sheet").hidden = true);
@@ -1055,7 +1064,8 @@ function aEnviar() {
 function mostrarStatusEnvio() {
   const el = $("envst"); if (!el) return;
   const l = aEnviar(), pend = l.filter(x => x.falta > 0).length, enviadosN = l.filter(x => x.ja > 0 && x.falta <= 0).length;
-  el.hidden = !l.length || !urlPlanilha();
+  if (!urlPlanilha()) { el.hidden = !(l.length && feito.lider); el.textContent = feito.lider ? `Mandado para o líder às ${feito.lider} ✓` : ""; return; }
+  el.hidden = !l.length;
   el.textContent = !l.length ? "" : pend ? (enviadosN ? `${pend} ${pend === 1 ? "item ainda não enviado" : "itens ainda não enviados"} · ${enviadosN} já enviados` : `${pend} ${pend === 1 ? "item para enviar" : "itens para enviar"}`) : "Tudo enviado para a planilha ✓";
 }
 function envMsg(m, err) {
@@ -1472,6 +1482,11 @@ $("fDigitado").addEventListener("click", () => {
   });
   if (mudou) { salvarExtras(); salvar(); salvarCodigos(); montarProdutos(); }
 })();
+// celular novo do líder: abrir o app pelo link ...#ligar (sem opção na tela)
+if (location.hash === "#ligar") {
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  setTimeout(() => { abrirCfg(); if (!$("cfgUrl").value) $("cfgUrl").value = "https://script.google.com/a/macros/superdonadecasa.com.br/s/AKfycbyxY1s0cLSPpsndCuqcf3LLI10NsjNj4FqimXy8O6nGLWlMwCjUEKYSCkAikEFU0xHjwg/exec"; }, 0);
+}
 chips(); render(); if (!verRecibo()) verRecebido();
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 </script>
