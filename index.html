@@ -1052,6 +1052,7 @@ function verRecibo() {
   return true;
 }
 let ultimoEnvio = null; // para a reserva pela página
+function hashTxt(s) { let a = 5381, b = 52711; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); a = (a * 33) ^ c; b = (b * 31) ^ c; } return (a >>> 0).toString(36) + (b >>> 0).toString(36); }
 function hojeISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function urlPlanilha() { try { return localStorage.getItem(KEY_URL) || ""; } catch (e) { return ""; } }
 // o que falta enviar: itens com R, descontando o que já foi enviado antes
@@ -1093,7 +1094,8 @@ async function enviar(novaSemana) {
   $("envEnviar").disabled = true; $("envSim").disabled = true; $("fEnviar").disabled = true;
   if ($("envio").hidden) { $("fApSt").textContent = "enviando…"; } else envMsg("Enviando…");
   let r;
-  const pedido = { acao: "lancar", data: iso, itens, novaSemana: !!novaSemana };
+  // código do envio: o mesmo envio repetido (recibo perdido, toque duplo) tem o mesmo código e a planilha não lança de novo
+  const pedido = { acao: "lancar", data: iso, itens, novaSemana: !!novaSemana, id: "E" + hashTxt(iso + "|" + JSON.stringify(itens) + "|" + JSON.stringify(enviados)) };
   try {
     r = await chamarScript(url, pedido);
   } catch (e) {
@@ -1110,6 +1112,7 @@ async function enviar(novaSemana) {
   const gravados = new Set((r.gravados || []).map(String));
   lista.forEach(x => { if (gravados.has(x.p.cod)) enviados[x.p.k] = fmt(x.ja + x.falta); });
   salvarR(); mostrarStatusEnvio();
+  if (r.jaLancado) { $("envio").hidden = true; toast(`Já estava lançado na aba ${r.aba} ✓ (nada duplicado)`); return; }
   const tot = typeof r.total === "number" ? ` · total do dia na planilha: R$ ${r.total.toFixed(2).replace(".", ",")}` : "";
   if (r.naoCouberam && r.naoCouberam.length) {
     envMsg(`Enviados ${gravados.size} itens para a aba ${esc(r.aba)}${tot}. Não couberam (aba cheia): ${r.naoCouberam.map(esc).join(", ")}.`, true);
@@ -1172,7 +1175,8 @@ $("recebSim").addEventListener("click", async () => {
     const p = PRODUTOS.find(x => x.k === k); return { cod: p.cod, desc: p.nome, qtd: somar(q), emb: p.emb.split(" ")[0] };
   });
   if (!itens.length) { recebAviso("Nenhum item para enviar."); return; }
-  const pedido = { acao: "lancar", data: recebido.data || hojeISO(), itens, novaSemana: recebForcar };
+  // o link do colega vale uma vez só: o código vem do próprio link
+  const pedido = { acao: "lancar", data: recebido.data || hojeISO(), itens, novaSemana: recebForcar, id: "L" + recebido.id };
   $("recebSim").disabled = true; recebAviso("Enviando…");
   let r;
   try { r = await chamarScript(url, pedido); }
@@ -1187,6 +1191,7 @@ $("recebSim").addEventListener("click", async () => {
   }
   if (!r || !r.ok) { recebAviso("A planilha respondeu com erro: " + esc((r && r.erro) || "desconhecido")); return; }
   marcarRecebido(recebido.id); recebido = null; $("receb").hidden = true;
+  if (r.jaLancado) { toast(`Esse link já foi lançado na aba ${r.aba} ✓ (nada duplicado)`); return; }
   const tot = typeof r.total === "number" ? ` · total do dia R$ ${r.total.toFixed(2).replace(".", ",")}` : "";
   toast(`Refeitório enviado para a aba ${r.aba}${tot}`);
 });

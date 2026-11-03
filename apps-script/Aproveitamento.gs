@@ -51,7 +51,24 @@ function processar(req) {
     if (req.acao === "teste") return { ok: true, planilha: ss.getName() };
     if (req.acao === "iniciarSemana") return iniciarSemana(ss, req);
     if (req.acao !== "lancar") return { ok: false, erro: "Ação desconhecida" };
-    return lancar(ss, req);
+    // Cada envio tem um código único: se o mesmo envio (ou o mesmo link do WhatsApp) chegar de novo, não lança duas vezes.
+    var props = PropertiesService.getScriptProperties();
+    var chave = req.id ? "envio:" + String(req.id).slice(0, 80) : "";
+    if (chave) {
+      var ja = props.getProperty(chave);
+      if (ja) {
+        var info = JSON.parse(ja);
+        return { ok: true, jaLancado: true, aba: info.aba, quando: info.quando,
+                 gravados: (req.itens || []).map(function (i) { return String(i.cod); }) };
+      }
+    }
+    var out = lancar(ss, req);
+    if (chave && out.ok) {
+      var tz = ss.getSpreadsheetTimeZone();
+      props.setProperty(chave, JSON.stringify({ aba: out.aba, quando: Utilities.formatDate(new Date(), tz, "dd/MM HH:mm"), t: Date.now() }));
+      limparCodigosAntigos_(props);
+    }
+    return out;
   } catch (err) {
     return { ok: false, erro: String(err && err.message || err) };
   } finally {
@@ -59,9 +76,21 @@ function processar(req) {
   }
 }
 
+// Guarda os códigos de envio por 30 dias.
+function limparCodigosAntigos_(props) {
+  var todas = props.getProperties(), limite = Date.now() - 30 * 86400000;
+  Object.keys(todas).forEach(function (k) {
+    if (k.indexOf("envio:") !== 0) return;
+    try { if (JSON.parse(todas[k]).t < limite) props.deleteProperty(k); } catch (e) { props.deleteProperty(k); }
+  });
+}
+
 function paginaResultado(out, volta, req) {
   var titulo, texto;
-  if (out.ok && out.aba) {
+  if (out.ok && out.jaLancado) {
+    titulo = "Já lançado ✓";
+    texto = "Este envio já tinha sido lançado na aba " + out.aba + (out.quando ? " (" + out.quando + ")" : "") + ". Nada foi lançado de novo.";
+  } else if (out.ok && out.aba) {
     titulo = "Enviado ✓";
     texto = (out.gravados || []).length + " itens na aba " + out.aba +
       (typeof out.total === "number" ? " · total do dia R$ " + out.total.toFixed(2).replace(".", ",") : "");
