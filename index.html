@@ -106,7 +106,6 @@ li.row.has::after{content:"";position:absolute;left:0;top:10px;bottom:10px;width
 .rbtn{display:none;align-items:center;justify-content:center;min-width:26px;height:22px;padding:0 7px;border-radius:7px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.02em;cursor:pointer}
 .row.has .rbtn{display:inline-flex}
 .rbtn[aria-pressed="true"]{background:var(--d0);border-color:var(--d0);color:#fff}
-.rbtn[aria-pressed="true"]::after{content:" aproveitamento";font-weight:700;margin-left:3px;text-transform:none}
 .rbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 li.row.r.has{background:linear-gradient(90deg,color-mix(in srgb,var(--d0) 14%,transparent),transparent 75%)}
 li.row.r.has::after{background:var(--d0)}
@@ -175,7 +174,7 @@ html:not([data-app]) .so-app{display:none!important}
 .fhdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .fdata{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 input[type=date][readonly]{pointer-events:none;opacity:.85}
-.btn.envio.zap{background:#1f8f4e;color:#fff;border-color:#1f8f4e}
+.btn.envio.zap{background:var(--surface);color:var(--fg);border-color:#1f8f4e}
 .fdata input{font-size:15px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--fg)}
 .fcard{border-radius:18px;padding:14px;display:grid;gap:12px;border:1.5px solid var(--line)}
 .fcard.av{background:var(--surface-2)}
@@ -260,6 +259,18 @@ input[type=date][readonly]{pointer-events:none;opacity:.85}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--fg);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:14px;font-weight:600;max-width:calc(100% - 32px);text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 @media (prefers-reduced-motion:no-preference){.panel{animation:up .2s cubic-bezier(.2,.8,.2,1)}@keyframes up{from{transform:translateY(30px);opacity:.5}}
   li.row.flash{animation:flash .9s ease-out}@keyframes flash{from{background:var(--accent-soft)}}}
+/* organização: topo mais baixo, lançados por tipo, um botão principal por tela */
+header.top .wrap{padding-block:10px;gap:10px}
+.brand>div{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.brand h1{font-size:22px}
+.brand small{margin-top:0}
+#info2{display:none}
+.secao{margin-top:24px}
+.stit{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-family:var(--display);font-size:21px;margin:0;padding:0 4px;border-bottom:2px solid var(--fg);padding-bottom:6px}
+.secao.ra .stit{border-bottom-color:var(--d0)}
+.stit span{font-family:var(--body);font-size:13px;font-weight:600;color:var(--muted)}
+.secao .grupo{margin-top:12px}
+#fZerar{flex-basis:100%;order:2;padding:8px;font-size:14px}
 </style>
 </head>
 <body>
@@ -268,7 +279,6 @@ input[type=date][readonly]{pointer-events:none;opacity:.85}
   <div class="wrap">
     <div class="brand">
       <div><h1>Quebra FLV</h1><small id="hoje"></small></div>
-      <span class="setor">Hortifruti</span>
     </div>
     <div class="searchrow">
       <div class="search">
@@ -602,7 +612,17 @@ function renderResumo() {
     ${r.n ? `<div class="rsplit"><span><b>${r.n - r.nr}</b>avarias</span><span class="ra"><b>${r.nr}</b>aproveitamento (R)</span></div>` : ""}
     ${r.n ? `<div class="rbar">${r.g.map((x, i) => x.n ? `<i class="d${i}" style="flex:${x.n}"></i>` : "").join("")}</div>
     <ul class="rleg">${r.g.map((x, i) => x.n ? `<li><i class="dot d${i}"></i><span>${curto[i]}</span><small>${sub(x)}</small><b>${x.n}</b></li>` : "").join("")}</ul>` : ""}`;
-  r.g.forEach((x, i) => { const el = document.getElementById("gsub" + i); if (el) el.textContent = `${x.n} ${x.n === 1 ? "item" : "itens"} · ${sub(x) || "0"}`; });
+  [false, true].forEach(ehR => {
+    const doTipo = PRODUTOS.filter(p => p.k in qtd && !!aprov[p.k] === ehR);
+    const conta = document.getElementById("sn" + +ehR);
+    if (conta) conta.textContent = `${doTipo.length} ${doTipo.length === 1 ? "item" : "itens"}`;
+    curto.forEach((_, i) => {
+      const el = document.getElementById(`gsub${+ehR}_${i}`); if (!el) return;
+      const x = { kg: 0, un: 0 };
+      doTipo.filter(p => p.s === i).forEach(p => { x[p.emb.startsWith("KG") ? "kg" : "un"] += somar(qtd[p.k]); });
+      el.textContent = sub(x) || "0";
+    });
+  });
   $("vazioL").hidden = r.n > 0; $("abrirPdf").hidden = false; $("zonaZerar").hidden = !r.n;
   $("abrirEnvio").hidden = !r.nr;
   // celular sem a planilha ligada (colega): o botão manda direto para o WhatsApp do líder
@@ -612,12 +632,18 @@ function renderResumo() {
   mostrarStatusEnvio();
 }
 function renderLanc() {
-  const r = resumoDados();
-  $("grupos").innerHTML = curto.map((c, i) => {
-    if (!r.g[i].n) return "";
-    const itens = PRODUTOS.filter(p => p.s === i && p.k in qtd);
-    return `<div class="grupo"><div class="gtit"><i class="dot d${i}"></i>${c}<span id="gsub${i}"></span></div><ul class="list">${itens.map(p => linha(p, true)).join("")}</ul></div>`;
-  }).join("");
+  // Lançados separados por tipo (avarias e aproveitamento) e, dentro de cada um, por estrutura
+  const bloco = (ehR, titulo, cls) => {
+    const doTipo = PRODUTOS.filter(p => p.k in qtd && !!aprov[p.k] === ehR);
+    if (!doTipo.length) return "";
+    const grupos = curto.map((c, i) => {
+      const itens = doTipo.filter(p => p.s === i);
+      if (!itens.length) return "";
+      return `<div class="grupo"><div class="gtit"><i class="dot d${i}"></i>${c}<span id="gsub${+ehR}_${i}"></span></div><ul class="list">${itens.map(p => linha(p, true)).join("")}</ul></div>`;
+    }).join("");
+    return `<section class="secao ${cls}"><h2 class="stit">${titulo}<span id="sn${+ehR}"></span></h2>${grupos}</section>`;
+  };
+  $("grupos").innerHTML = bloco(false, "Avarias", "av") + bloco(true, "Aproveitamento (R)", "ra");
   $("confirmaLimpar").hidden = true; $("zonaLimpar").hidden = false;
   renderResumo();
 }
@@ -735,7 +761,8 @@ $("main").addEventListener("click", e => {
   if (aprov[k]) delete aprov[k]; else aprov[k] = true;
   salvarR();
   b.setAttribute("aria-pressed", String(!!aprov[k])); b.closest("li").classList.toggle("r", !!aprov[k]);
-  toast(aprov[k] ? "Marcado como aproveitamento do refeitório" : "Voltou para avarias");
+  toast(aprov[k] ? "Marcado como aproveitamento" : "Voltou para avarias");
+  if (vista === "lancados") renderLanc();
   totais();
 });
 $("main").addEventListener("click", e => {
