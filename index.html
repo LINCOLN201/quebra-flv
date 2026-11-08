@@ -271,6 +271,7 @@ header.top .wrap{padding-block:10px;gap:10px}
 .stit span{font-family:var(--body);font-size:13px;font-weight:600;color:var(--muted)}
 .secao .grupo{margin-top:12px}
 #fZerar{flex-basis:100%;order:2;padding:8px;font-size:14px}
+.dashl{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);padding:0 4px}
 </style>
 </head>
 <body>
@@ -368,6 +369,8 @@ header.top .wrap{padding-block:10px;gap:10px}
         <button class="btn fb" type="button" id="fLider">Mandar para o líder</button>
       </div>
     </section>
+
+    <div class="dashl"><span id="dashSt"></span><button class="lnk" type="button" id="dashLigar"></button></div>
 
     <div class="msg" id="pdfMsg" hidden></div>
 
@@ -468,6 +471,18 @@ header.top .wrap{padding-block:10px;gap:10px}
     <div class="actions">
       <button class="btn ghost" id="cfgFechar" type="button">Voltar</button>
       <button class="btn primary" id="cfgSalvar" type="button">Salvar e testar</button>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="dashCfg" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="dashTitle">
+    <h2 id="dashTitle">Ligar ao Painel</h2>
+    <p>Digite o código que o líder passou. É feito uma vez só neste celular. Depois, as avarias vão sozinhas ao gerar o PDF.</p>
+    <label class="field"><span>Código</span><input id="dashInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX"></label>
+    <div class="msg err" id="dashMsg" hidden></div>
+    <div class="actions">
+      <button class="btn ghost" id="dashVoltar" type="button">Voltar</button>
+      <button class="btn primary" id="dashSalvar" type="button">Salvar</button>
     </div>
   </div>
 </div>
@@ -821,7 +836,7 @@ function msg(m, err) { const el = $("pdfMsg"); el.hidden = !m; el.textContent = 
 const KEY_FEITO = "quebra-flv-feito-v1";
 let feito = {};
 try { feito = JSON.parse(localStorage.getItem(KEY_FEITO) || "{}") || {}; } catch (e) { feito = {}; }
-function marcarFeito(chave) { feito[chave] = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); try { localStorage.setItem(KEY_FEITO, JSON.stringify(feito)); } catch (e) {} renderFinal(); mostrarStatusEnvio(); }
+function marcarFeito(chave) { feito[chave] = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); try { localStorage.setItem(KEY_FEITO, JSON.stringify(feito)); } catch (e) {} renderFinal(); mostrarStatusEnvio(); if (chave === "av") dashEnviar(); }
 function renderFinal() {
   const ks = Object.keys(qtd), nAp = ks.filter(k => aprov[k]).length, nAv = ks.length - nAp;
   const nT = ks.length;
@@ -878,6 +893,8 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") { ["sheet", 
 $("limpar").addEventListener("click", () => { $("zonaLimpar").hidden = true; $("confirmaLimpar").hidden = false; });
 $("naoLimpar").addEventListener("click", () => { $("zonaLimpar").hidden = false; $("confirmaLimpar").hidden = true; });
 $("simLimpar").addEventListener("click", () => {
+  if (dashCodigo() && Object.keys(qtd).length) dashEnviar();
+  dashNovoLote();
   qtd = {}; aprov = {}; enviados = {}; feito = {}; salvar(); salvarR(); try { localStorage.setItem(KEY_FEITO, "{}"); } catch (e) {}
   $("dataPdf").value = ""; $("envData").value = ""; $("sheet").hidden = true; renderLanc(); totais(); toast("Lançamentos zerados. Bom próximo dia!");
 });
@@ -1519,6 +1536,60 @@ if (location.hash === "#ligar") {
   try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
   setTimeout(() => { abrirCfg(); if (!$("cfgUrl").value) $("cfgUrl").value = "https://script.google.com/a/macros/superdonadecasa.com.br/s/AKfycbyxY1s0cLSPpsndCuqcf3LLI10NsjNj4FqimXy8O6nGLWlMwCjUEKYSCkAikEFU0xHjwg/exec"; }, 0);
 }
+// ---- avarias para o Painel (itens sem R) ----
+// Cada lote vai guardado no celular até o servidor confirmar: sem internet, sai depois.
+const URL_DASH = "https://vebtjwomxtebgxwhxtmy.supabase.co/functions/v1/avarias-app";
+const KEY_DASH = "quebra-flv-dash-codigo", KEY_DASH_PEND = "quebra-flv-dash-pend", KEY_DASH_LOTE = "quebra-flv-dash-lote", KEY_DASH_OK = "quebra-flv-dash-ok", KEY_DASH_RUIM = "quebra-flv-dash-recusado";
+const lsLer = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+const lsPor = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const lsTira = k => { try { localStorage.removeItem(k); } catch (e) {} };
+function dashCodigo() { return lsLer(KEY_DASH); }
+function dashLote() { let l = lsLer(KEY_DASH_LOTE); if (!l) { l = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10); lsPor(KEY_DASH_LOTE, l); } return l; }
+function dashNovoLote() { lsTira(KEY_DASH_LOTE); }
+function dashPend() { try { return JSON.parse(lsLer(KEY_DASH_PEND) || "{}") || {}; } catch (e) { return {}; } }
+function dashEnviar() {
+  if (!dashCodigo()) return;
+  const itens = PRODUTOS.filter(p => p.k in qtd && !aprov[p.k]).map(p => ({ cod: p.cod, nome: p.nome, qtd: somar(qtd[p.k]), un: p.emb.split(" ")[0], est: curto[p.s] }));
+  const lote = dashLote(), pend = dashPend();
+  pend[lote] = { data: hojeISO(), lote, itens };
+  lsPor(KEY_DASH_PEND, JSON.stringify(pend));
+  dashDespachar();
+}
+let dashOcupado = false;
+async function dashDespachar() {
+  const codigo = dashCodigo();
+  if (!codigo || dashOcupado) return renderDash();
+  dashOcupado = true;
+  try {
+    for (const [lote, p] of Object.entries(dashPend())) {
+      const r = await fetch(URL_DASH, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ codigo, ...p }) });
+      if (r.status === 401) { lsPor(KEY_DASH_RUIM, "1"); break; }
+      lsTira(KEY_DASH_RUIM);
+      if (r.status >= 500) break; // o servidor falhou: fica guardado para tentar depois
+      const pend = dashPend(); delete pend[lote]; lsPor(KEY_DASH_PEND, JSON.stringify(pend)); // 200 gravou; 4xx (ex.: dia antigo) nunca vai passar
+      if (r.ok) lsPor(KEY_DASH_OK, new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
+    }
+  } catch (e) { /* sem internet: fica guardado */ }
+  dashOcupado = false;
+  renderDash();
+}
+function renderDash() {
+  const lig = !!dashCodigo(), ruim = !!lsLer(KEY_DASH_RUIM), n = Object.keys(dashPend()).length, ok = lsLer(KEY_DASH_OK);
+  $("dashSt").textContent = !lig ? "Painel: não ligado" : ruim ? "Painel: código recusado" : n ? "Painel: aguardando internet" : ok ? `Painel: ✓ enviado às ${ok}` : "Painel: ligado";
+  $("dashLigar").textContent = !lig || ruim ? "Ligar com código" : "Trocar código";
+}
+function dashAbrir() { $("dashInput").value = ""; $("dashMsg").hidden = true; $("dashCfg").hidden = false; }
+$("dashLigar").addEventListener("click", dashAbrir);
+$("dashVoltar").addEventListener("click", () => $("dashCfg").hidden = true);
+$("dashCfg").addEventListener("click", e => { if (e.target.id === "dashCfg") $("dashCfg").hidden = true; });
+$("dashSalvar").addEventListener("click", () => {
+  const c = $("dashInput").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (c.length !== 16) { $("dashMsg").textContent = "O código tem 16 letras e números."; $("dashMsg").hidden = false; return; }
+  lsPor(KEY_DASH, c); lsTira(KEY_DASH_RUIM); $("dashCfg").hidden = true; toast("Celular ligado ao Painel"); dashDespachar();
+});
+window.addEventListener("online", dashDespachar);
+renderDash(); dashDespachar();
+
 chips(); render(); if (!verRecibo()) verRecebido();
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 </script>
