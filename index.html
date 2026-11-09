@@ -907,7 +907,7 @@ $("naoLimpar").addEventListener("click", () => { $("zonaLimpar").hidden = false;
 $("simLimpar").addEventListener("click", () => {
   if (dashCodigo() && Object.keys(qtd).length) dashEnviar();
   dashNovoLote();
-  qtd = {}; aprov = {}; qtdR = {}; enviados = {}; feito = {}; salvar(); salvarR(); try { localStorage.setItem(KEY_FEITO, "{}"); } catch (e) {}
+  lsTira(KEY_ZAP); qtd = {}; aprov = {}; qtdR = {}; enviados = {}; feito = {}; salvar(); salvarR(); try { localStorage.setItem(KEY_FEITO, "{}"); } catch (e) {}
   $("dataPdf").value = ""; $("envData").value = ""; $("sheet").hidden = true; renderLanc(); totais(); toast("Lançamentos zerados. Bom próximo dia!");
 });
 
@@ -1183,6 +1183,10 @@ function b64url(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(ob
 function deB64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return JSON.parse(decodeURIComponent(escape(atob(s)))); }
 const LIDER_FONE = "5561982158778"; // WhatsApp do líder (fixo)
 $("fLider").addEventListener("click", () => mandarLider(false));
+const KEY_ZAP = "quebra-flv-ultimo-zap";
+function abrirZap(u) { const a = document.createElement("a"); a.href = u; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); }
+// o mesmo link pode ser aberto de novo: a planilha não lança duas vezes
+function reabrirZap() { const u = urlPlanilha() ? "" : lsLer(KEY_ZAP); if (!u) return false; abrirZap(u); msg("WhatsApp aberto de novo. É só tocar em enviar."); return true; }
 async function mandarLider(daTela) {
   const aviso = (m, err) => daTela ? toast(m) : msg(m, err);
   const iso = hojeISO();
@@ -1194,8 +1198,8 @@ async function mandarLider(daTela) {
   const link = APP_URL + "#lider=" + b64url({ v: 1, id, data: iso, itens });
   const [aa, mm, dd] = iso.split("-");
   const texto = `Aproveitamento refeitório ${dd}/${mm} – ${itens.length} ${itens.length === 1 ? "item" : "itens"} (Quebra FLV). Abra no celular do líder para enviar à planilha: ${link}`;
-  const a = document.createElement("a"); a.href = "https://wa.me/" + LIDER_FONE + "?text=" + encodeURIComponent(texto); a.target = "_blank"; a.rel = "noopener";
-  document.body.appendChild(a); a.click(); a.remove();
+  const zap = "https://wa.me/" + LIDER_FONE + "?text=" + encodeURIComponent(texto);
+  lsPor(KEY_ZAP, zap); abrirZap(zap);
   faltam.forEach(x => { enviados[x.p.k] = fmt(x.total); }); salvarR();
   marcarFeito("lider");
   aviso("Mensagem pronta no WhatsApp do líder. É só tocar em enviar.");
@@ -1653,13 +1657,14 @@ function concluir() {
   if (!Object.keys(qtd).length) return;
   const cod = !!dashCodigo(); // sem código o aproveitamento ainda vai para o líder; avarias e PDFs esperam o código
   const h = hashTxt(JSON.stringify([qtd, aprov, qtdR]));
-  if (cod && feito.fimH === h) { msg("Este dia já foi enviado. Nada mudou desde então."); return; }
+  if (cod && feito.fimH === h) { if (!reabrirZap()) msg("Este dia já foi enviado. Nada mudou desde então."); return; }
   $("dataPdf").value = $("envData").value = hojeISO();
   let n = 0;
   if (cod) { dashEnviar(); n = pdfEnfileirar(); pdfDespachar(); feito.fimH = h; marcarFeito("fim"); }
   const temNovo = aEnviar().some(x => x.falta > 0);
   if (temNovo && urlPlanilha()) enviar(false);
   else if (temNovo) mandarLider(false);
+  else if (!cod && reabrirZap()) return;
   else msg(cod ? `Avarias enviadas ao site e ${n === 1 ? "PDF" : "PDFs"} a caminho do e-mail.` : "Ligue este celular com o código (botão abaixo) para enviar avarias e PDFs.", !cod);
 }
 window.addEventListener("online", () => { dashDespachar(); pdfDespachar(); });
