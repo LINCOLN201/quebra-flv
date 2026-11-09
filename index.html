@@ -267,6 +267,7 @@ header.top .wrap{padding-block:10px;gap:10px}
 .stit span{font-family:var(--body);font-size:13px;font-weight:600;color:var(--muted)}
 .secao .grupo{margin-top:12px}
 #fZerar{flex-basis:100%;order:2;padding:8px;font-size:14px}
+.rdia{font-size:13.5px;font-weight:600;color:var(--danger,#b42318);margin-bottom:10px}
 .campos{display:grid;gap:6px;justify-items:end}.lb{font-size:11px;font-weight:700;color:var(--muted);width:56px;text-align:right}
 .fpassos{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}.fpassos li{display:flex;justify-content:space-between;gap:12px}.fpassos b{font-weight:600}.fpassos span{color:var(--muted);text-align:right}
 .dashl{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);padding:0 4px}
@@ -544,20 +545,26 @@ try { qtdR = JSON.parse(localStorage.getItem(KEY_RX) || "{}") || {}; } catch (e)
 const temRef = k => !!qtdR[k];
 const chaves = () => [...new Set([...Object.keys(qtd), ...Object.keys(qtdR)])];
 try { enviados = JSON.parse(localStorage.getItem(KEY_ENV) || "{}") || {}; } catch (e) { enviados = {}; }
-function salvarR() { try { localStorage.setItem(KEY_RX, JSON.stringify(qtdR)); localStorage.setItem(KEY_ENV, JSON.stringify(enviados)); } catch (e) {} }
+// dia dos lançamentos: o que foi lançado num dia sempre sai com a data daquele dia
+const KEY_DIA = "quebra-flv-dia";
+function diaLanc() { try { return localStorage.getItem(KEY_DIA) || ""; } catch (e) { return ""; } }
+function marcaDia() { try { if (!chaves().length) localStorage.removeItem(KEY_DIA); else if (!diaLanc()) localStorage.setItem(KEY_DIA, hojeISO()); } catch (e) {} }
+const lancDia = () => diaLanc() || hojeISO();
+function salvarR() { marcaDia(); try { localStorage.setItem(KEY_RX, JSON.stringify(qtdR)); localStorage.setItem(KEY_ENV, JSON.stringify(enviados)); } catch (e) {} }
 // tipo de lançamento: campo Refeitório = aproveitamento; campo principal = avaria
 let tipoAtual = "AVARIAS";
 const ehAprov = t => t !== "AVARIAS";
 function qv(k) { if (tipoAtual === "TUDO") return qtd[k] || qtdR[k] || ""; return (ehAprov(tipoAtual) ? qtdR[k] : qtd[k]) || ""; }
 let qtd = {};
 try { qtd = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { qtd = {}; }
-function salvar() { try { localStorage.setItem(KEY, JSON.stringify(qtd)); } catch (e) {} }
+function salvar() { marcaDia(); try { localStorage.setItem(KEY, JSON.stringify(qtd)); } catch (e) {} }
 // lançamentos antigos marcados com R passam para o campo Refeitório
 (function () {
   let velho = {}; try { velho = JSON.parse(localStorage.getItem(KEY_R) || "{}") || {}; } catch (e) {}
   Object.keys(velho).forEach(k => { if (qtd[k]) { qtdR[k] = fmt(somar(qtd[k]) + somar(qtdR[k] || "")); delete qtd[k]; } });
   try { localStorage.removeItem(KEY_R); } catch (e) {}
   if (Object.keys(velho).length) { salvar(); salvarR(); }
+  marcaDia();
 })();
 
 let filtro = "todos"; // todos | 0..3
@@ -636,7 +643,8 @@ function resumoDados() {
 const sub = x => [x.kg ? fmt(x.kg) + " kg" : "", x.un ? fmt(x.un) + " un" : ""].filter(Boolean).join(" · ");
 function renderResumo() {
   const r = resumoDados();
-  $("resumo").innerHTML = `
+  const dPend = diaLanc() && diaLanc() < hojeISO() && r.n && !diaConcluido() ? diaLanc().split("-").reverse().slice(0, 2).join("/") : "";
+  $("resumo").innerHTML = `${dPend ? `<div class="rdia">Lançamentos de ${dPend} ainda não enviados. Toque em Concluir e enviar antes de lançar o dia novo.</div>` : ""}
     <div class="rtop"><div><b class="rnum">${r.n}</b><span>${r.n === 1 ? "item lançado" : "itens lançados"}</span></div>
       <div class="rtot"><span><b>${fmt(r.kg)}</b>kg</span><span><b>${fmt(r.un)}</b>un</span></div></div>
     ${r.n ? `<div class="rsplit"><span><b>${r.nav}</b>avarias</span><span class="ra"><b>${r.nr}</b>refeitório</span></div>` : ""}
@@ -878,7 +886,7 @@ $("sheet").addEventListener("click", e => {
   const fn = b.classList.contains("bpdf") ? acaoPDF : b.classList.contains("bprint") ? acaoPrint : acaoShare;
   if (fn) fn(b.dataset.tipo);
 });
-$("fEnviar").addEventListener("click", () => { $("dataPdf").value = $("envData").value = hojeISO(); enviar(false); });
+$("fEnviar").addEventListener("click", () => { $("dataPdf").value = $("envData").value = lancDia(); enviar(false); });
 $("fDesl").addEventListener("click", () => {
   if (!confirm("Desconectar este celular da planilha? Ele passa a mandar o aproveitamento para o líder pelo WhatsApp.")) return;
   try { localStorage.removeItem(KEY_URL); } catch (e) {}
@@ -903,7 +911,7 @@ $("naoLimpar").addEventListener("click", () => { $("zonaLimpar").hidden = false;
 $("simLimpar").addEventListener("click", () => {
   if (dashCodigo() && chaves().length) dashEnviar();
   dashNovoLote();
-  lsTira(KEY_ZAP); qtd = {}; qtdR = {}; enviados = {}; feito = {}; salvar(); salvarR(); try { localStorage.setItem(KEY_FEITO, "{}"); } catch (e) {}
+  limparLancados();
   $("dataPdf").value = ""; $("envData").value = ""; $("sheet").hidden = true; renderLanc(); totais(); toast("Lançamentos zerados. Bom próximo dia!");
 });
 
@@ -1138,7 +1146,7 @@ function abrirEnvio() {
 async function enviar(novaSemana) {
   const url = urlPlanilha();
   if (!url) { $("envio").hidden = true; abrirCfg(); return; }
-  const iso = hojeISO(); $("envData").value = iso;
+  const iso = lancDia(); $("envData").value = iso;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) { envMsg("Escolha a data.", true); return; }
   const lista = aEnviar().filter(x => x.falta > 0);
   if (!lista.length) { envMsg("Não há itens novos para enviar."); return; }
@@ -1185,7 +1193,7 @@ function abrirZap(u) { const a = document.createElement("a"); a.href = u; a.targ
 function reabrirZap() { const u = urlPlanilha() ? "" : lsLer(KEY_ZAP); if (!u) return false; abrirZap(u); msg("WhatsApp aberto de novo. É só tocar em enviar."); return true; }
 async function mandarLider(daTela) {
   const aviso = (m, err) => daTela ? toast(m) : msg(m, err);
-  const iso = hojeISO();
+  const iso = lancDia();
   // só o que ainda não foi mandado: acrescentar item depois não repete o que já foi
   const faltam = aEnviar().filter(x => x.falta > 0);
   const itens = faltam.map(x => [x.p.k, fmt(x.falta)]);
@@ -1566,7 +1574,7 @@ function dashEnviar() {
   if (!dashCodigo()) return;
   const itens = PRODUTOS.filter(p => p.k in qtd).map(p => ({ cod: p.cod, nome: p.nome, qtd: somar(qtd[p.k]), un: p.emb.split(" ")[0], est: curto[p.s] }));
   const lote = dashLote(), pend = dashPend();
-  pend[lote] = { data: hojeISO(), lote, itens };
+  pend[lote] = { data: lancDia(), lote, itens };
   lsPor(KEY_DASH_PEND, JSON.stringify(pend));
   dashDespachar();
 }
@@ -1643,12 +1651,22 @@ function renderPassos() {
     linha("PDF", !ks.length ? "nada lançado" : !cod ? "falta ligar com código" : nP ? "aguardando internet" : feito.fim ? "indo para o e-mail" : "vai para o e-mail da empresa") +
     linha("Refeitório", !nAp ? "nenhum" : feito.fim ? (ligado ? "enviado à planilha" : "conferir no WhatsApp") : ligado ? `${nAp} para a planilha` : `${nAp} para o líder no WhatsApp`);
 }
+function limparLancados() { lsTira(KEY_ZAP); qtd = {}; qtdR = {}; enviados = {}; feito = {}; salvar(); salvarR(); try { localStorage.setItem(KEY_FEITO, "{}"); } catch (e) {} }
+const diaConcluido = () => !!feito.fimH && feito.fimH === hashTxt(JSON.stringify([qtd, qtdR]));
+// virou o dia: o que já foi concluído sai da lista sozinho; o que não foi fica, e será enviado com a data certa
+function verificaDia() {
+  const d = diaLanc();
+  if (!d || d >= hojeISO() || !chaves().length || !diaConcluido()) { if (vista === "lancados") renderResumo(); return; }
+  dashNovoLote(); limparLancados(); $("sheet").hidden = true; renderLanc(); render(); totais();
+  toast("Dia novo: a lista anterior já foi enviada e foi limpa.");
+}
 function concluir() {
   if (!chaves().length) return;
   const cod = !!dashCodigo(); // sem código o aproveitamento ainda vai para o líder; avarias e PDFs esperam o código
   const h = hashTxt(JSON.stringify([qtd, qtdR]));
   if (cod && feito.fimH === h) { if (!reabrirZap()) msg("Este dia já foi enviado. Nada mudou desde então."); return; }
-  $("dataPdf").value = $("envData").value = hojeISO();
+  if ((new Date(hojeISO()) - new Date(lancDia())) / 864e5 > 7) { msg("Estes lançamentos têm mais de 7 dias e o sistema não aceita mais. Avise o líder antes de zerar.", true); return; }
+  $("dataPdf").value = $("envData").value = lancDia();
   let n = 0;
   if (cod) { dashEnviar(); n = pdfEnfileirar(); pdfDespachar(); feito.fimH = h; marcarFeito("fim"); }
   const temNovo = aEnviar().some(x => x.falta > 0);
@@ -1658,8 +1676,8 @@ function concluir() {
   else msg(cod ? `Avarias enviadas ao site e ${n === 1 ? "PDF" : "PDFs"} a caminho do e-mail.` : "Ligue este celular com o código (botão abaixo) para enviar avarias e PDFs.", !cod);
 }
 window.addEventListener("online", () => { dashDespachar(); pdfDespachar(); });
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { dashDespachar(); pdfDespachar(); } });
-renderDash(); dashDespachar(); pdfDespachar();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { dashDespachar(); pdfDespachar(); verificaDia(); } });
+renderDash(); dashDespachar(); pdfDespachar(); verificaDia();
 
 chips(); render(); if (!verRecibo()) verRecebido();
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
