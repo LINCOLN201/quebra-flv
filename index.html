@@ -271,6 +271,7 @@ header.top .wrap{padding-block:10px;gap:10px}
 .stit span{font-family:var(--body);font-size:13px;font-weight:600;color:var(--muted)}
 .secao .grupo{margin-top:12px}
 #fZerar{flex-basis:100%;order:2;padding:8px;font-size:14px}
+.fpassos{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}.fpassos li{display:flex;justify-content:space-between;gap:12px}.fpassos b{font-weight:600}.fpassos span{color:var(--muted);text-align:right}
 .dashl{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);padding:0 4px}
 </style>
 </head>
@@ -306,7 +307,7 @@ header.top .wrap{padding-block:10px;gap:10px}
 
   <section id="viewLanc" hidden><div class="wrap">
     <div class="resumo" id="resumo"></div>
-    <button class="btn primary big" id="abrirPdf" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Finalizar o dia</button>
+    <button class="btn primary big" id="abrirPdf" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Concluir e enviar</button>
     <button class="btn envio" id="abrirEnvio" type="button" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg><span id="abrirEnvioTxt">Enviar aproveitamento para a planilha</span></button>
     <div class="envst" id="envst" hidden></div>
     <div id="grupos"></div>
@@ -351,11 +352,13 @@ header.top .wrap{padding-block:10px;gap:10px}
 
 <div class="sheet" id="sheet" hidden>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-    <div class="fhdr"><h2 id="sheetTitle">Finalizar o dia</h2><label class="fdata"><span>Data</span><input type="date" id="dataPdf" readonly tabindex="-1" title="Data do dia (travada)"></label></div>
+    <div class="fhdr"><h2 id="sheetTitle">Dia concluído</h2><label class="fdata"><span>Data</span><input type="date" id="dataPdf" readonly tabindex="-1" title="Data do dia (travada)"></label></div>
     <input type="hidden" id="tipo" value="AVARIAS">
 
+    <ul class="fpassos" id="fPassos"></ul>
+
     <section class="fcard av" id="fcAv">
-      <div class="ftop"><span class="fnum fic" aria-hidden="true">1</span><div class="ftit"><b>Impressão (PDF)</b><small id="fAvSub">avarias e refeitório na mesma folha</small></div><span class="fst" id="fAvSt"></span></div>
+      <div class="ftop"><span class="fnum fic" aria-hidden="true">1</span><div class="ftit"><b>PDF no celular (opcional)</b><small id="fAvSub">avarias e refeitório na mesma folha</small></div><span class="fst" id="fAvSt"></span></div>
       <div class="fbtns">
         <button class="btn fb primary bshare so-app" type="button" data-tipo="TUDO" hidden>Compartilhar PDF</button>
         <button class="btn fb bpdf" type="button" data-tipo="TUDO">Baixar PDF</button>
@@ -639,7 +642,7 @@ function renderResumo() {
     });
   });
   $("vazioL").hidden = r.n > 0; $("abrirPdf").hidden = false; $("zonaZerar").hidden = !r.n;
-  $("abrirEnvio").hidden = !r.nr;
+  $("abrirEnvio").hidden = !r.nr || !urlPlanilha();
   // celular sem a planilha ligada (colega): o botão manda direto para o WhatsApp do líder
   const lig = !!urlPlanilha();
   $("abrirEnvioTxt").textContent = lig ? "Enviar aproveitamento para a planilha" : "Enviar aproveitamento para o líder";
@@ -855,14 +858,16 @@ function renderFinal() {
   $("fEnviar").disabled = !pend;
   // celular do colega: o cartão 2 some (ele manda pelo botão verde da tela de lançados)
   $("fcAp").hidden = !ligado; $("fDeslBox").hidden = !ligado;
+  renderPassos();
 }
-$("abrirPdf").addEventListener("click", () => {
+$("abrirPdf").addEventListener("click", () => { abrirFolha(); concluir(); });
+function abrirFolha() {
   msg(""); $("fZerarConf").hidden = true; $("fZerar").hidden = false;
   $("dataPdf").value = hojeISO(); // data travada: sempre o dia de hoje
   $("modoLancados").checked = true;
   renderFinal();
   $("sheet").hidden = false;
-});
+}
 // os botões dos cartões dizem o tipo (Avarias / Aproveitamento refeitório)
 let acaoPDF = null, acaoPrint = null, acaoShare = null;
 $("sheet").addEventListener("click", e => {
@@ -882,7 +887,8 @@ $("fZerar").addEventListener("click", () => {
   // aviso para não perder o aproveitamento antes de zerar
   const nAp = Object.keys(qtd).filter(k => aprov[k]).length, ligado = !!urlPlanilha();
   const pend = aEnviar().filter(x => x.falta > 0).length;
-  if (nAp && !ligado && !feito.lider) msg("Atenção: o aproveitamento (R) ainda não foi mandado para o líder.", true);
+  if (Object.keys(qtd).length && !feito.fim) msg("Atenção: o dia ainda não foi finalizado e enviado.", true);
+  else if (nAp && !ligado && !feito.lider) msg("Atenção: o aproveitamento (R) ainda não foi mandado para o líder.", true);
   else if (nAp && ligado && pend) msg("Atenção: ainda tem aproveitamento (R) que não foi enviado para a planilha.", true);
 });
 $("fZerarNao").addEventListener("click", () => { $("fZerar").hidden = false; $("fZerarConf").hidden = true; });
@@ -924,7 +930,7 @@ function tituloPapel(bl, tipo) {
 }
 function nomeArquivo(tipo, iso) {
   const [aa, mm, dd] = iso.split("-");
-  return `${tipo === "TUDO" ? "Quebra FLV" : tipo === "AVARIAS" ? "Avarias FLV" : "Refeitorio FLV"} ${dd}-${mm}-${aa}.pdf`;
+  return `${tipo === "TUDO" ? "Quebra FLV" : tipo === "AVARIAS" ? "AVARIA" : "REFEITORIO"} ${dd}-${mm}-${aa}.pdf`;
 }
 function gerarPDF(modo, tipo, dataBR) {
   const bl = blocos(modo, tipo);
@@ -1091,7 +1097,7 @@ function verRecibo() {
   if (pend.recebido) marcarRecebido(pend.recebido);
   try { localStorage.removeItem(KEY_PEND); } catch (e) {}
   mostrarVista("lancados"); totais();
-  if (pend.enviados) { $("abrirPdf").click(); }
+  if (pend.enviados) { abrirFolha(); }
   toast("Enviado para a planilha ✓");
   return true;
 }
@@ -1174,14 +1180,17 @@ $("fLider").addEventListener("click", () => mandarLider(false));
 async function mandarLider(daTela) {
   const aviso = (m, err) => daTela ? toast(m) : msg(m, err);
   const iso = hojeISO();
-  const itens = PRODUTOS.filter(p => aprov[p.k] && p.k in qtd).map(p => [p.k, qtd[p.k]]);
-  if (!itens.length) { aviso("Nenhum item marcado com R.", true); return; }
+  // só o que ainda não foi mandado: acrescentar item depois não repete o que já foi
+  const faltam = aEnviar().filter(x => x.falta > 0);
+  const itens = faltam.map(x => [x.p.k, fmt(x.falta)]);
+  if (!itens.length) { aviso("Nenhum aproveitamento novo para mandar.", true); return; }
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const link = APP_URL + "#lider=" + b64url({ v: 1, id, data: iso, itens });
   const [aa, mm, dd] = iso.split("-");
   const texto = `Aproveitamento refeitório ${dd}/${mm} – ${itens.length} ${itens.length === 1 ? "item" : "itens"} (Quebra FLV). Abra no celular do líder para enviar à planilha: ${link}`;
   const a = document.createElement("a"); a.href = "https://wa.me/" + LIDER_FONE + "?text=" + encodeURIComponent(texto); a.target = "_blank"; a.rel = "noopener";
   document.body.appendChild(a); a.click(); a.remove();
+  faltam.forEach(x => { enviados[x.p.k] = fmt(x.total); }); salvarR();
   marcarFeito("lider");
   aviso("Mensagem pronta no WhatsApp do líder. É só tocar em enviar.");
 }
@@ -1587,8 +1596,63 @@ $("dashSalvar").addEventListener("click", () => {
   if (c.length !== 16) { $("dashMsg").textContent = "O código tem 16 letras e números."; $("dashMsg").hidden = false; return; }
   lsPor(KEY_DASH, c); lsTira(KEY_DASH_RUIM); $("dashCfg").hidden = true; toast("Celular ligado ao Painel"); dashDespachar();
 });
-window.addEventListener("online", dashDespachar);
-renderDash(); dashDespachar();
+// Finalizar: avarias vão ao site, os PDFs vão ao e-mail da empresa e o aproveitamento segue para o líder (ou para a planilha)
+const KEY_PDF_PEND = "quebra-flv-pdf-pend";
+const TIPOS_PDF = [["AVARIAS", "AVARIA", k => !aprov[k]], ["APROVEITAMENTO REFEITÓRIO", "REFEITORIO", k => !!aprov[k]]];
+function pdfPend() { try { return JSON.parse(lsLer(KEY_PDF_PEND) || "{}") || {}; } catch (e) { return {}; } }
+function pdfEnfileirar() {
+  const lote = dashLote(), pend = pdfPend(), iso = $("dataPdf").value;
+  let n = 0;
+  TIPOS_PDF.forEach(([tipoApp, tipo, filtro]) => {
+    if (!Object.keys(qtd).some(filtro)) return;
+    const p = preparar(tipoApp); if (!p) return;
+    const doc = fazerPDF(p); if (!doc) return;
+    pend[lote + ":" + tipo] = { acao: "pdf", data: iso, lote, tipo, b64: doc.output("datauristring").split(",")[1] };
+    n++;
+  });
+  lsPor(KEY_PDF_PEND, JSON.stringify(pend));
+  return n;
+}
+let pdfOcupado = false;
+async function pdfDespachar() {
+  const codigo = dashCodigo();
+  if (!codigo || pdfOcupado) return renderPassos();
+  pdfOcupado = true;
+  try {
+    for (const [k, p] of Object.entries(pdfPend())) {
+      const r = await fetch(URL_DASH, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ codigo, ...p }) });
+      if (r.status === 401) { lsPor(KEY_DASH_RUIM, "1"); break; }
+      if (r.status >= 500 || r.status === 429) break;
+      const pend = pdfPend(); delete pend[k]; lsPor(KEY_PDF_PEND, JSON.stringify(pend));
+    }
+  } catch (e) { /* sem internet: fica guardado */ }
+  pdfOcupado = false;
+  renderPassos(); renderDash();
+}
+function renderPassos() {
+  const ks = Object.keys(qtd), nAp = ks.filter(k => aprov[k]).length, nAv = ks.length - nAp, ligado = !!urlPlanilha(), cod = dashCodigo(), nP = Object.keys(pdfPend()).length;
+  const linha = (a, b) => `<li><b>${a}</b><span>${b}</span></li>`;
+  $("fPassos").innerHTML =
+    linha("Avarias", !nAv ? "nenhuma" : !cod ? "falta ligar com código" : feito.fim ? "enviadas ao site" : `${nAv} para o site`) +
+    linha("PDF", !ks.length ? "nada lançado" : !cod ? "falta ligar com código" : nP ? "aguardando internet" : feito.fim ? "indo para o e-mail" : "vai para o e-mail da empresa") +
+    linha("Aproveitamento", !nAp ? "nenhum" : feito.fim ? (ligado ? "enviado à planilha" : "conferir no WhatsApp") : ligado ? `${nAp} para a planilha` : `${nAp} para o líder no WhatsApp`);
+}
+function concluir() {
+  if (!Object.keys(qtd).length) return;
+  const cod = !!dashCodigo(); // sem código o aproveitamento ainda vai para o líder; avarias e PDFs esperam o código
+  const h = hashTxt(JSON.stringify([qtd, aprov]));
+  if (cod && feito.fimH === h) { msg("Este dia já foi enviado. Nada mudou desde então."); return; }
+  $("dataPdf").value = $("envData").value = hojeISO();
+  let n = 0;
+  if (cod) { dashEnviar(); n = pdfEnfileirar(); pdfDespachar(); feito.fimH = h; marcarFeito("fim"); }
+  const temNovo = aEnviar().some(x => x.falta > 0);
+  if (temNovo && urlPlanilha()) enviar(false);
+  else if (temNovo) mandarLider(false);
+  else msg(cod ? `Avarias enviadas ao site e ${n === 1 ? "PDF" : "PDFs"} a caminho do e-mail.` : "Ligue este celular com o código (botão abaixo) para enviar avarias e PDFs.", !cod);
+}
+window.addEventListener("online", () => { dashDespachar(); pdfDespachar(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { dashDespachar(); pdfDespachar(); } });
+renderDash(); dashDespachar(); pdfDespachar();
 
 chips(); render(); if (!verRecibo()) verRecebido();
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
