@@ -103,10 +103,6 @@ li.row.has::after{content:"";position:absolute;left:0;top:10px;bottom:10px;width
 .add:focus-visible,.rm:focus-visible,.tira:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .empty .add{border-color:var(--accent);margin-top:16px}
 .rm.ed{color:var(--accent-ink)}
-.rbtn{display:none;align-items:center;justify-content:center;min-width:26px;height:22px;padding:0 7px;border-radius:7px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.02em;cursor:pointer}
-.row.has .rbtn{display:inline-flex}
-.rbtn[aria-pressed="true"]{background:var(--d0);border-color:var(--d0);color:#fff}
-.rbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 li.row.r.has{background:linear-gradient(90deg,color-mix(in srgb,var(--d0) 14%,transparent),transparent 75%)}
 li.row.r.has::after{background:var(--d0)}
 .rsplit{display:flex;gap:8px;flex-wrap:wrap}
@@ -271,7 +267,7 @@ header.top .wrap{padding-block:10px;gap:10px}
 .stit span{font-family:var(--body);font-size:13px;font-weight:600;color:var(--muted)}
 .secao .grupo{margin-top:12px}
 #fZerar{flex-basis:100%;order:2;padding:8px;font-size:14px}
-.rextra{display:none;order:5;grid-column:1/-1;align-items:center;justify-content:flex-end;gap:8px;font-size:13px;color:var(--muted)}.row.has:not(.r) .rextra{display:flex}.rextra input{width:84px;padding:7px 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);font:inherit;text-align:right}
+.campos{display:grid;gap:6px;justify-items:end}.lb{font-size:11px;font-weight:700;color:var(--muted);width:56px;text-align:right}
 .fpassos{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}.fpassos li{display:flex;justify-content:space-between;gap:12px}.fpassos b{font-weight:600}.fpassos span{color:var(--muted);text-align:right}
 .dashl{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);padding:0 4px}
 </style>
@@ -359,7 +355,7 @@ header.top .wrap{padding-block:10px;gap:10px}
     <ul class="fpassos" id="fPassos"></ul>
 
     <section class="fcard av" id="fcAv">
-      <div class="ftop"><span class="fnum fic" aria-hidden="true">1</span><div class="ftit"><b>PDF no celular (opcional)</b><small id="fAvSub">avarias e refeitório na mesma folha</small></div><span class="fst" id="fAvSt"></span></div>
+      <div class="ftop"><span class="fnum fic" aria-hidden="true">1</span><div class="ftit"><b>PDF no celular (opcional)</b><small id="fAvSub">avarias e refeitório</small></div><span class="fst" id="fAvSt"></span></div>
       <div class="fbtns">
         <button class="btn fb primary bshare so-app" type="button" data-tipo="TUDO" hidden>Compartilhar PDF</button>
         <button class="btn fb bpdf" type="button" data-tipo="TUDO">Baixar PDF</button>
@@ -367,7 +363,7 @@ header.top .wrap{padding-block:10px;gap:10px}
     </section>
 
     <section class="fcard ap" id="fcAp">
-      <div class="ftop"><span class="fnum fic" aria-hidden="true">2</span><div class="ftit"><b>Cópia do refeitório na planilha</b><small id="fApSub">itens com R · planilha do Drive</small></div><span class="fst" id="fApSt"></span></div>
+      <div class="ftop"><span class="fnum fic" aria-hidden="true">2</span><div class="ftit"><b>Cópia do refeitório na planilha</b><small id="fApSub">itens de refeitório · planilha do Drive</small></div><span class="fst" id="fApSt"></span></div>
       <div class="fbtns" id="fApBtns">
         <button class="btn fb benv" type="button" id="fEnviar">Enviar para a planilha</button>
         <button class="btn fb" type="button" id="fLider">Mandar para o líder</button>
@@ -444,7 +440,7 @@ header.top .wrap{padding-block:10px;gap:10px}
 <div class="sheet" id="envio" hidden>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="envioTitle">
     <h2 id="envioTitle">Enviar aproveitamento</h2>
-    <p>Os itens marcados com <b>R</b> vão para a planilha de aproveitamento do Drive, na aba do dia da semana.</p>
+    <p>Os itens do campo <b>Refeitório</b> vão para a planilha de aproveitamento do Drive, na aba do dia da semana.</p>
     <label class="field"><span>Data do aproveitamento</span><input type="date" id="envData" readonly tabindex="-1" title="Data do dia (travada)"></label>
     <ul class="elist" id="envLista"></ul>
     <div class="msg" id="envMsg" hidden></div>
@@ -541,21 +537,28 @@ montarProdutos();
 function norm(t) { return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase(); }
 
 const KEY_R = "quebra-flv-aprov-v1", KEY_ENV = "quebra-flv-enviados-v1", KEY_URL = "quebra-flv-planilha-url";
-// qtdR: refeitório do mesmo produto que também teve avaria (qtd = avaria, qtdR = refeitório)
+// Cada produto tem duas quantidades: qtd = avaria, qtdR = refeitório
 const KEY_RX = "quebra-flv-ref-extra-v1";
-let aprov = {}, enviados = {}, qtdR = {};
+let enviados = {}, qtdR = {};
 try { qtdR = JSON.parse(localStorage.getItem(KEY_RX) || "{}") || {}; } catch (e) { qtdR = {}; }
-const temRef = k => !!(aprov[k] || qtdR[k]);
-try { aprov = JSON.parse(localStorage.getItem(KEY_R) || "{}") || {}; } catch (e) { aprov = {}; }
+const temRef = k => !!qtdR[k];
+const chaves = () => [...new Set([...Object.keys(qtd), ...Object.keys(qtdR)])];
 try { enviados = JSON.parse(localStorage.getItem(KEY_ENV) || "{}") || {}; } catch (e) { enviados = {}; }
-function salvarR() { try { localStorage.setItem(KEY_RX, JSON.stringify(qtdR)); localStorage.setItem(KEY_R, JSON.stringify(aprov)); localStorage.setItem(KEY_ENV, JSON.stringify(enviados)); } catch (e) {} }
-// tipo de lançamento: itens com R = aproveitamento do refeitório; sem R = avarias
+function salvarR() { try { localStorage.setItem(KEY_RX, JSON.stringify(qtdR)); localStorage.setItem(KEY_ENV, JSON.stringify(enviados)); } catch (e) {} }
+// tipo de lançamento: campo Refeitório = aproveitamento; campo principal = avaria
 let tipoAtual = "AVARIAS";
 const ehAprov = t => t !== "AVARIAS";
-function qv(k) { if (!(k in qtd)) return ""; if (tipoAtual === "TUDO") return qtd[k]; if (ehAprov(tipoAtual)) return aprov[k] ? qtd[k] : (qtdR[k] || ""); return aprov[k] ? "" : qtd[k]; }
+function qv(k) { if (tipoAtual === "TUDO") return qtd[k] || qtdR[k] || ""; return (ehAprov(tipoAtual) ? qtdR[k] : qtd[k]) || ""; }
 let qtd = {};
 try { qtd = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { qtd = {}; }
 function salvar() { try { localStorage.setItem(KEY, JSON.stringify(qtd)); } catch (e) {} }
+// lançamentos antigos marcados com R passam para o campo Refeitório
+(function () {
+  let velho = {}; try { velho = JSON.parse(localStorage.getItem(KEY_R) || "{}") || {}; } catch (e) {}
+  Object.keys(velho).forEach(k => { if (qtd[k]) { qtdR[k] = fmt(somar(qtd[k]) + somar(qtdR[k] || "")); delete qtd[k]; } });
+  try { localStorage.removeItem(KEY_R); } catch (e) {}
+  if (Object.keys(velho).length) { salvar(); salvarR(); }
+})();
 
 let filtro = "todos"; // todos | 0..3
 let vista = "produtos"; // produtos | lancados
@@ -605,27 +608,30 @@ function render() {
   totais();
 }
 
-function linha(p, lanc) {
-  const v = qtd[p.k] || "";
-  const u = p.emb.split(" ")[0];
+function campo(p, ref, lanc) {
+  const v = (ref ? qtdR : qtd)[p.k] || "", u = p.emb.split(" ")[0], nome = ref ? "Refeitório" : "Avaria";
+  return `<div class="qty">${lanc ? "" : `<span class="lb">${nome}</span>`}<button class="plus" type="button" aria-label="Somar mais uma quantidade">+</button><input type="text" inputmode="decimal" enterkeyhint="done" ${ref ? 'data-ref="1"' : ""} id="${lanc ? "l" : "q"}${ref ? "r" : ""}_${p.s}_${p.cod}" value="${esc(v)}" placeholder="0" aria-label="${nome} de ${esc(p.nome)}"><span class="u">${u}</span><small class="soma" hidden></small></div>`;
+}
+// lista de produtos: dois campos (avaria e refeitório); lançados: só o campo da seção
+function linha(p, lanc, ref) {
+  const tem = lanc || p.k in qtd || p.k in qtdR;
   const est = !lanc && filtro === "todos" ? `<i class="dot d${p.s}" title="${curto[p.s]}"></i>` : "";
-  return `<li class="row${v ? " has" : ""}${lanc ? " l" : ""}${aprov[p.k] ? " r" : ""}" data-k="${p.k}">
+  return `<li class="row${tem ? " has" : ""}${lanc ? " l" : ""}${ref ? " r" : ""}" data-k="${p.k}">
       <div><div class="pname">${esc(p.nome)}</div>
-      <div class="pmeta"><button class="rbtn" type="button" data-r="${p.k}" aria-pressed="${!!aprov[p.k]}" aria-label="Aproveitamento refeitório (R)" title="Aproveitamento refeitório">R</button>${est}<span>Cód. ${p.cod}</span>${p.meu ? `<span class="tag ${p.cod.length >= 8 ? "prov" : "meu"}">${p.cod.length >= 8 ? "Código EAN" : "Cadastrado"}</span>${lanc ? "" : `<button class="rm ed" type="button" data-ed="${p.k}">Editar</button><button class="rm" type="button" data-rm="${p.k}">Excluir</button>`}` : ""}</div></div>
-      <div class="qty"><button class="plus" type="button" aria-label="Somar mais uma quantidade">+</button><input type="text" inputmode="decimal" enterkeyhint="done" id="${lanc ? "l" : "q"}_${p.s}_${p.cod}" value="${esc(v)}" placeholder="0" aria-label="Quantidade de ${esc(p.nome)}"><span class="u">${u}</span><small class="soma" hidden></small></div>
-      <label class="rextra"><span>+ Refeitório</span><input type="text" inputmode="decimal" enterkeyhint="done" data-rx="${p.k}" value="${esc(qtdR[p.k] || "")}" aria-label="Quantidade para o refeitório de ${esc(p.nome)}" placeholder="0"></label>
-      ${lanc ? `<button class="tira" type="button" data-tira="${p.k}" aria-label="Tirar ${esc(p.nome)} dos lançados">×</button>` : ""}
+      <div class="pmeta">${est}<span>Cód. ${p.cod}</span>${p.meu ? `<span class="tag ${p.cod.length >= 8 ? "prov" : "meu"}">${p.cod.length >= 8 ? "Código EAN" : "Cadastrado"}</span>${lanc ? "" : `<button class="rm ed" type="button" data-ed="${p.k}">Editar</button><button class="rm" type="button" data-rm="${p.k}">Excluir</button>`}` : ""}</div></div>
+      ${lanc ? campo(p, ref, true) : `<div class="campos">${campo(p, false, false)}${campo(p, true, false)}</div>`}
+      ${lanc ? `<button class="tira" type="button" data-tira="${p.k}" ${ref ? 'data-ref="1"' : ""} aria-label="Tirar ${esc(p.nome)} dos lançados">×</button>` : ""}
     </li>`;
 }
 // totais por estrutura (itens, kg, un)
 function resumoDados() {
-  const g = curto.map(() => ({ n: 0, kg: 0, un: 0 })); let kg = 0, un = 0, n = 0, nr = 0;
+  const g = curto.map(() => ({ n: 0, kg: 0, un: 0 })); let kg = 0, un = 0, n = 0, nr = 0, nav = 0;
   PRODUTOS.forEach(p => {
-    if (!(p.k in qtd)) return;
-    const v = somar(qtd[p.k]); const ehKg = p.emb.startsWith("KG");
-    g[p.s].n++; n++; if (temRef(p.k)) nr++; if (ehKg) { g[p.s].kg += v; kg += v; } else { g[p.s].un += v; un += v; }
+    if (!(p.k in qtd) && !(p.k in qtdR)) return;
+    const v = somar(qtd[p.k]) + somar(qtdR[p.k]); const ehKg = p.emb.startsWith("KG");
+    g[p.s].n++; n++; if (p.k in qtd) nav++; if (p.k in qtdR) nr++; if (ehKg) { g[p.s].kg += v; kg += v; } else { g[p.s].un += v; un += v; }
   });
-  return { g, kg, un, n, nr };
+  return { g, kg, un, n, nr, nav };
 }
 const sub = x => [x.kg ? fmt(x.kg) + " kg" : "", x.un ? fmt(x.un) + " un" : ""].filter(Boolean).join(" · ");
 function renderResumo() {
@@ -633,17 +639,17 @@ function renderResumo() {
   $("resumo").innerHTML = `
     <div class="rtop"><div><b class="rnum">${r.n}</b><span>${r.n === 1 ? "item lançado" : "itens lançados"}</span></div>
       <div class="rtot"><span><b>${fmt(r.kg)}</b>kg</span><span><b>${fmt(r.un)}</b>un</span></div></div>
-    ${r.n ? `<div class="rsplit"><span><b>${Object.keys(qtd).filter(k => !aprov[k]).length}</b>avarias</span><span class="ra"><b>${r.nr}</b>aproveitamento (R)</span></div>` : ""}
+    ${r.n ? `<div class="rsplit"><span><b>${r.nav}</b>avarias</span><span class="ra"><b>${r.nr}</b>refeitório</span></div>` : ""}
     ${r.n ? `<div class="rbar">${r.g.map((x, i) => x.n ? `<i class="d${i}" style="flex:${x.n}"></i>` : "").join("")}</div>
     <ul class="rleg">${r.g.map((x, i) => x.n ? `<li><i class="dot d${i}"></i><span>${curto[i]}</span><small>${sub(x)}</small><b>${x.n}</b></li>` : "").join("")}</ul>` : ""}`;
   [false, true].forEach(ehR => {
-    const doTipo = PRODUTOS.filter(p => p.k in qtd && !!aprov[p.k] === ehR);
+    const doTipo = PRODUTOS.filter(p => p.k in (ehR ? qtdR : qtd));
     const conta = document.getElementById("sn" + +ehR);
     if (conta) conta.textContent = `${doTipo.length} ${doTipo.length === 1 ? "item" : "itens"}`;
     curto.forEach((_, i) => {
       const el = document.getElementById(`gsub${+ehR}_${i}`); if (!el) return;
       const x = { kg: 0, un: 0 };
-      doTipo.filter(p => p.s === i).forEach(p => { x[p.emb.startsWith("KG") ? "kg" : "un"] += somar(qtd[p.k]); });
+      doTipo.filter(p => p.s === i).forEach(p => { x[p.emb.startsWith("KG") ? "kg" : "un"] += somar((ehR ? qtdR : qtd)[p.k]); });
       el.textContent = sub(x) || "0";
     });
   });
@@ -658,16 +664,16 @@ function renderResumo() {
 function renderLanc() {
   // Lançados separados por tipo (avarias e aproveitamento) e, dentro de cada um, por estrutura
   const bloco = (ehR, titulo, cls) => {
-    const doTipo = PRODUTOS.filter(p => p.k in qtd && !!aprov[p.k] === ehR);
+    const doTipo = PRODUTOS.filter(p => p.k in (ehR ? qtdR : qtd));
     if (!doTipo.length) return "";
     const grupos = curto.map((c, i) => {
       const itens = doTipo.filter(p => p.s === i);
       if (!itens.length) return "";
-      return `<div class="grupo"><div class="gtit"><i class="dot d${i}"></i>${c}<span id="gsub${+ehR}_${i}"></span></div><ul class="list">${itens.map(p => linha(p, true)).join("")}</ul></div>`;
+      return `<div class="grupo"><div class="gtit"><i class="dot d${i}"></i>${c}<span id="gsub${+ehR}_${i}"></span></div><ul class="list">${itens.map(p => linha(p, true, ehR)).join("")}</ul></div>`;
     }).join("");
     return `<section class="secao ${cls}"><h2 class="stit">${titulo}<span id="sn${+ehR}"></span></h2>${grupos}</section>`;
   };
-  $("grupos").innerHTML = bloco(false, "Avarias", "av") + bloco(true, "Aproveitamento (R)", "ra");
+  $("grupos").innerHTML = bloco(false, "Avarias", "av") + bloco(true, "Refeitório", "ra");
   $("confirmaLimpar").hidden = true; $("zonaLimpar").hidden = false;
   renderResumo();
 }
@@ -680,7 +686,7 @@ function mostrarVista(v) {
   window.scrollTo(0, 0);
 }
 function totais() {
-  const n = Object.keys(qtd).length;
+  const n = chaves().length;
   $("badge").textContent = n; $("badge").classList.toggle("zero", !n);
   if (vista === "lancados") renderResumo();
 }
@@ -754,7 +760,7 @@ function abrirEdicao(k) {
 }
 function moverDados(kVelho, kNovo, codVelho) {
   if (kVelho === kNovo) return;
-  if (qtd[kVelho]) { qtd[kNovo] = fmt(somar(qtd[kVelho]) + somar(qtd[kNovo] || "")); delete qtd[kVelho]; }
+  [qtd, qtdR].forEach(m => { if (m[kVelho]) { m[kNovo] = fmt(somar(m[kVelho]) + somar(m[kNovo] || "")); delete m[kVelho]; } }); salvarR();
   Object.keys(codigos).forEach(c => { if (codigos[c] === kVelho) codigos[c] = kNovo; });
   if (codVelho.length >= 8) codigos[chaveDe(codVelho)] = kNovo; // o EAN antigo continua achando o produto
 }
@@ -780,22 +786,12 @@ function salvarEdicao(cod, nome, emb, s) {
   totais(); toast(aviso);
 }
 $("main").addEventListener("click", e => {
-  const b = e.target.closest("[data-r]"); if (!b) return;
-  const k = b.dataset.r; if (!(k in qtd)) return;
-  if (aprov[k]) delete aprov[k]; else { aprov[k] = true; if (qtdR[k]) { qtd[k] = fmt(somar(qtd[k]) + somar(qtdR[k])); delete qtdR[k]; salvar(); } }
-  salvarR();
-  b.setAttribute("aria-pressed", String(!!aprov[k])); b.closest("li").classList.toggle("r", !!aprov[k]);
-  toast(aprov[k] ? "Marcado como aproveitamento" : "Voltou para avarias");
-  if (vista === "lancados") renderLanc();
-  totais();
-});
-$("main").addEventListener("click", e => {
   const b = e.target.closest("[data-ed]"); if (!b) return;
   abrirEdicao(b.dataset.ed);
 });
 $("main").addEventListener("click", e => {
   const b = e.target.closest("[data-tira]"); if (!b) return;
-  delete qtd[b.dataset.tira]; delete aprov[b.dataset.tira]; delete qtdR[b.dataset.tira]; salvar(); salvarR(); renderLanc(); totais(); toast("Item tirado dos lançados");
+  delete (b.dataset.ref ? qtdR : qtd)[b.dataset.tira]; salvar(); salvarR(); renderLanc(); totais(); toast("Item tirado dos lançados");
 });
 $("main").addEventListener("click", e => {
   const b = e.target.closest("[data-rm]"); if (!b) return;
@@ -808,16 +804,16 @@ $("main").addEventListener("click", e => {
 });
 
 $("main").addEventListener("input", e => {
-  const inp = e.target; if (inp.tagName !== "INPUT" || inp.dataset.rx) return;
-  const li = inp.closest("li"); const k = li.dataset.k;
+  const inp = e.target; if (inp.tagName !== "INPUT" || !inp.closest("li[data-k]")) return;
+  const li = inp.closest("li"); const k = li.dataset.k, loja = inp.dataset.ref ? qtdR : qtd;
   let v = inp.value.replace(/\./g, ",").replace(/[^\d,+]/g, "").replace(/\+{2,}/g, "+").replace(/^\+/, "");
   if (v !== inp.value) inp.value = v;
   const total = somar(v);
-  if (total > 0) qtd[k] = fmt(total); else { delete qtd[k]; delete qtdR[k]; if (aprov[k]) delete aprov[k]; salvarR(); }
-  const sm = li.querySelector(".soma");
+  if (total > 0) loja[k] = fmt(total); else delete loja[k];
+  const sm = inp.parentElement.querySelector(".soma");
   if (v.includes("+") && total > 0) { sm.hidden = false; sm.textContent = "= " + fmt(total); } else sm.hidden = true;
-  li.classList.toggle("has", k in qtd);
-  salvar(); totais();
+  li.classList.toggle("has", li.classList.contains("l") || k in qtd || k in qtdR);
+  salvar(); salvarR(); totais(); if (vista === "lancados") renderResumo();
 });
 $("main").addEventListener("pointerdown", e => { if (e.target.closest(".plus")) e.preventDefault(); });
 $("main").addEventListener("click", e => {
@@ -833,10 +829,10 @@ $("main").addEventListener("keydown", e => {
   }
 });
 $("main").addEventListener("focusout", e => {
-  const inp = e.target; if (inp.tagName !== "INPUT" || inp.dataset.rx) return;
-  const li = inp.closest("li"), k = li.dataset.k;
-  inp.value = k in qtd ? qtd[k] : "";
-  li.querySelector(".soma").hidden = true;
+  const inp = e.target; if (inp.tagName !== "INPUT" || !inp.closest("li[data-k]")) return;
+  const k = inp.closest("li").dataset.k, loja = inp.dataset.ref ? qtdR : qtd;
+  inp.value = k in loja ? loja[k] : "";
+  inp.parentElement.querySelector(".soma").hidden = true;
 });
 
 // ---- painel de impressão ----
@@ -847,10 +843,10 @@ let feito = {};
 try { feito = JSON.parse(localStorage.getItem(KEY_FEITO) || "{}") || {}; } catch (e) { feito = {}; }
 function marcarFeito(chave) { feito[chave] = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); try { localStorage.setItem(KEY_FEITO, JSON.stringify(feito)); } catch (e) {} renderFinal(); mostrarStatusEnvio(); if (chave === "av") dashEnviar(); }
 function renderFinal() {
-  const ks = Object.keys(qtd), nAp = ks.filter(temRef).length, nAv = ks.filter(k => !aprov[k]).length;
+  const ks = chaves(), nAp = ks.filter(temRef).length, nAv = ks.filter(k => k in qtd).length;
   const nT = ks.length;
   $("fAvSub").textContent = nT ? `${nAv} ${nAv === 1 ? "avaria" : "avarias"} + ${nAp} refeitório · mesma folha` : "nenhum item lançado";
-  $("fApSub").textContent = nAp ? `${nAp} ${nAp === 1 ? "item" : "itens"} com R · planilha do Drive` : "nenhum item com R";
+  $("fApSub").textContent = nAp ? `${nAp} ${nAp === 1 ? "item" : "itens"} de refeitório · planilha do Drive` : "nenhum item de refeitório";
   $("fcAv").classList.toggle("vazio", !nT); $("fcAp").classList.toggle("vazio", !nAp);
   const sAv = $("fAvSt");
   sAv.textContent = !nT ? "—" : feito.av ? `✓ feito ${feito.av}` : "pendente";
@@ -891,11 +887,11 @@ $("fDesl").addEventListener("click", () => {
 $("fZerar").addEventListener("click", () => {
   $("fZerar").hidden = true; $("fZerarConf").hidden = false;
   // aviso para não perder o aproveitamento antes de zerar
-  const nAp = Object.keys(qtd).filter(temRef).length, ligado = !!urlPlanilha();
+  const nAp = chaves().filter(temRef).length, ligado = !!urlPlanilha();
   const pend = aEnviar().filter(x => x.falta > 0).length;
-  if (Object.keys(qtd).length && !feito.fim) msg("Atenção: o dia ainda não foi finalizado e enviado.", true);
-  else if (nAp && !ligado && !feito.lider) msg("Atenção: o aproveitamento (R) ainda não foi mandado para o líder.", true);
-  else if (nAp && ligado && pend) msg("Atenção: ainda tem aproveitamento (R) que não foi enviado para a planilha.", true);
+  if (chaves().length && !feito.fim) msg("Atenção: o dia ainda não foi finalizado e enviado.", true);
+  else if (nAp && !ligado && !feito.lider) msg("Atenção: o refeitório ainda não foi mandado para o líder.", true);
+  else if (nAp && ligado && pend) msg("Atenção: ainda tem refeitório que não foi enviado para a planilha.", true);
 });
 $("fZerarNao").addEventListener("click", () => { $("fZerar").hidden = false; $("fZerarConf").hidden = true; });
 $("fZerarSim").addEventListener("click", () => $("simLimpar").click());
@@ -905,9 +901,9 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") { ["sheet", 
 $("limpar").addEventListener("click", () => { $("zonaLimpar").hidden = true; $("confirmaLimpar").hidden = false; });
 $("naoLimpar").addEventListener("click", () => { $("zonaLimpar").hidden = false; $("confirmaLimpar").hidden = true; });
 $("simLimpar").addEventListener("click", () => {
-  if (dashCodigo() && Object.keys(qtd).length) dashEnviar();
+  if (dashCodigo() && chaves().length) dashEnviar();
   dashNovoLote();
-  lsTira(KEY_ZAP); qtd = {}; aprov = {}; qtdR = {}; enviados = {}; feito = {}; salvar(); salvarR(); try { localStorage.setItem(KEY_FEITO, "{}"); } catch (e) {}
+  lsTira(KEY_ZAP); qtd = {}; qtdR = {}; enviados = {}; feito = {}; salvar(); salvarR(); try { localStorage.setItem(KEY_FEITO, "{}"); } catch (e) {}
   $("dataPdf").value = ""; $("envData").value = ""; $("sheet").hidden = true; renderLanc(); totais(); toast("Lançamentos zerados. Bom próximo dia!");
 });
 
@@ -988,8 +984,8 @@ function preparar(tipo) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) { msg("Escolha a data do lançamento.", true); $("dataPdf").focus(); return null; }
   const [aa, mm, dd] = iso.split("-");
   tipoAtual = tipo;
-  const temItens = modo === "completo" || Object.keys(qtd).some(k => qv(k));
-  if (!temItens) { msg(tipo === "AVARIAS" ? "Nenhum item de avaria (sem R) lançado." : tipo === "TUDO" ? "Nenhum item lançado ainda." : "Nenhum item marcado com R.", true); return null; }
+  const temItens = modo === "completo" || chaves().some(k => qv(k));
+  if (!temItens) { msg(tipo === "AVARIAS" ? "Nenhuma avaria lançada." : tipo === "TUDO" ? "Nenhum item lançado ainda." : "Nenhum item de refeitório lançado.", true); return null; }
   return { modo, tipo, dataBR: `${dd}/${mm}/${aa}`, nome: nomeArquivo(tipo, iso) };
 }
 function fazerPDF(p) {
@@ -1042,7 +1038,7 @@ acaoShare = async tipo => {
 // backup
 $("exportar").addEventListener("click", () => {
   const d = new Date(), dd = String(d.getDate()).padStart(2, "0"), mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dados = { app: "quebra-flv", versao: 1, salvoEm: d.toISOString(), lancamentos: qtd, produtos: extras, codigos };
+  const dados = { app: "quebra-flv", versao: 1, salvoEm: d.toISOString(), lancamentos: qtd, refeitorio: qtdR, produtos: extras, codigos };
   baixarBlob(new Blob([JSON.stringify(dados, null, 1)], { type: "application/json" }), `backup-quebra-flv-${dd}-${mm}-${d.getFullYear()}.json`);
   toast("Backup salvo em Downloads");
 });
@@ -1055,7 +1051,7 @@ $("importar").addEventListener("change", async () => {
     (d.produtos || []).forEach(x => { if (x && x.cod && x.nome && !extras.some(e => e.s === x.s && e.cod === x.cod) && !PRODUTOS.some(p => p.cod === x.cod)) { extras.push({ cod: String(x.cod), nome: String(x.nome), emb: x.emb === "UN 1" ? "UN 1" : "KG 1", s: +x.s || 0 }); np++; } });
     salvarExtras(); montarProdutos();
     Object.entries(d.codigos || {}).forEach(([c, k]) => { if (PRODUTOS.some(p => p.k === k)) { codigos[c] = k; nc++; } }); salvarCodigos();
-    Object.entries(d.lancamentos || {}).forEach(([k, v]) => { if (PRODUTOS.some(p => p.k === k) && somar(v) > 0) { qtd[k] = fmt(somar(v)); nl++; } }); salvar();
+    Object.entries(d.lancamentos || {}).forEach(([k, v]) => { if (PRODUTOS.some(p => p.k === k) && somar(v) > 0) { qtd[k] = fmt(somar(v)); nl++; } }); Object.entries(d.refeitorio || {}).forEach(([k, v]) => { if (PRODUTOS.some(p => p.k === k) && somar(v) > 0) { qtdR[k] = fmt(somar(v)); nl++; } }); salvar(); salvarR();
     $("sheet").hidden = true; chips(); render(); totais();
     toast(`Importado: ${nl} lançamentos, ${np} produtos, ${nc} códigos`);
   } catch (e) { msg("Esse arquivo não é um backup do Quebra FLV.", true); }
@@ -1111,10 +1107,10 @@ let ultimoEnvio = null; // para a reserva pela página
 function hashTxt(s) { let a = 5381, b = 52711; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); a = (a * 33) ^ c; b = (b * 31) ^ c; } return (a >>> 0).toString(36) + (b >>> 0).toString(36); }
 function hojeISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function urlPlanilha() { try { return localStorage.getItem(KEY_URL) || ""; } catch (e) { return ""; } }
-// o que falta enviar: itens com R, descontando o que já foi enviado antes
+// o que falta enviar: itens de refeitório, descontando o que já foi enviado antes
 function aEnviar() {
-  return PRODUTOS.filter(p => p.k in qtd && temRef(p.k)).map(p => {
-    const total = somar(aprov[p.k] ? qtd[p.k] : qtdR[p.k]), ja = enviados[p.k] ? somar(enviados[p.k]) : 0;
+  return PRODUTOS.filter(p => temRef(p.k)).map(p => {
+    const total = somar(qtdR[p.k]), ja = enviados[p.k] ? somar(enviados[p.k]) : 0;
     return { p, falta: Math.round((total - ja) * 1000) / 1000, ja, total };
   });
 }
@@ -1233,7 +1229,7 @@ function marcarRecebido(id) { try { const ja = JSON.parse(localStorage.getItem("
 $("recebSim").addEventListener("click", async () => {
   if (!recebido) return;
   const url = urlPlanilha();
-  if (!url) { recebAviso("Este celular ainda não está ligado à planilha. Abra <b>Finalizar o dia → Mais opções → Ligar este celular à planilha</b> e depois abra o link de novo."); return; }
+  if (!url) { recebAviso("Este celular ainda não está ligado à planilha. Ligue este celular à planilha primeiro e depois abra o link de novo."); return; }
   const itens = recebido.itens.filter(([k, q]) => PRODUTOS.some(p => p.k === k) && somar(q) > 0).map(([k, q]) => {
     const p = PRODUTOS.find(x => x.k === k); return { cod: p.cod, desc: p.nome, qtd: somar(q), emb: p.emb.split(" ")[0] };
   });
@@ -1543,7 +1539,7 @@ $("fDigitado").addEventListener("click", () => {
     const interno = EAN_FIXOS[x.cod] || x.cod;
     const alvo = PRODUTOS.find(p => !p.meu && p.cod === interno);
     if (!alvo) return;
-    if (qtd[kVelho] && kVelho !== alvo.k) { const soma = somar(qtd[kVelho]) + somar(qtd[alvo.k] || ""); qtd[alvo.k] = fmt(soma); delete qtd[kVelho]; }
+    if (kVelho !== alvo.k) [qtd, qtdR].forEach(m => { if (m[kVelho]) { m[alvo.k] = fmt(somar(m[kVelho]) + somar(m[alvo.k] || "")); delete m[kVelho]; } }); salvarR();
     Object.keys(codigos).forEach(c => { if (codigos[c] === kVelho) codigos[c] = alvo.k; });
     if (EAN_FIXOS[x.cod]) codigos[x.cod] = alvo.k;
     extras = extras.filter(e => e !== x); mudou = true;
@@ -1555,7 +1551,7 @@ if (location.hash === "#ligar") {
   try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
   setTimeout(() => { abrirCfg(); if (!$("cfgUrl").value) $("cfgUrl").value = "https://script.google.com/a/macros/superdonadecasa.com.br/s/AKfycbyxY1s0cLSPpsndCuqcf3LLI10NsjNj4FqimXy8O6nGLWlMwCjUEKYSCkAikEFU0xHjwg/exec"; }, 0);
 }
-// ---- avarias para o Painel (itens sem R) ----
+// ---- avarias para o Painel (campo principal) ----
 // Cada lote vai guardado no celular até o servidor confirmar: sem internet, sai depois.
 const URL_DASH = "https://vebtjwomxtebgxwhxtmy.supabase.co/functions/v1/avarias-app";
 const KEY_DASH = "quebra-flv-dash-codigo", KEY_DASH_PEND = "quebra-flv-dash-pend", KEY_DASH_LOTE = "quebra-flv-dash-lote", KEY_DASH_OK = "quebra-flv-dash-ok", KEY_DASH_RUIM = "quebra-flv-dash-recusado";
@@ -1568,7 +1564,7 @@ function dashNovoLote() { lsTira(KEY_DASH_LOTE); }
 function dashPend() { try { return JSON.parse(lsLer(KEY_DASH_PEND) || "{}") || {}; } catch (e) { return {}; } }
 function dashEnviar() {
   if (!dashCodigo()) return;
-  const itens = PRODUTOS.filter(p => p.k in qtd && !aprov[p.k]).map(p => ({ cod: p.cod, nome: p.nome, qtd: somar(qtd[p.k]), un: p.emb.split(" ")[0], est: curto[p.s] }));
+  const itens = PRODUTOS.filter(p => p.k in qtd).map(p => ({ cod: p.cod, nome: p.nome, qtd: somar(qtd[p.k]), un: p.emb.split(" ")[0], est: curto[p.s] }));
   const lote = dashLote(), pend = dashPend();
   pend[lote] = { data: hojeISO(), lote, itens };
   lsPor(KEY_DASH_PEND, JSON.stringify(pend));
@@ -1606,15 +1602,15 @@ $("dashSalvar").addEventListener("click", () => {
   if (c.length !== 16) { $("dashMsg").textContent = "O código tem 16 letras e números."; $("dashMsg").hidden = false; return; }
   lsPor(KEY_DASH, c); lsTira(KEY_DASH_RUIM); $("dashCfg").hidden = true; toast("Celular ligado ao Painel"); dashDespachar();
 });
-// Finalizar: avarias vão ao site, os PDFs vão ao e-mail da empresa e o aproveitamento segue para o líder (ou para a planilha)
+// Concluir: avarias vão ao site, os PDFs vão ao e-mail da empresa e o aproveitamento segue para o líder (ou para a planilha)
 const KEY_PDF_PEND = "quebra-flv-pdf-pend";
-const TIPOS_PDF = [["AVARIAS", "AVARIA", k => !aprov[k]], ["APROVEITAMENTO REFEITÓRIO", "REFEITORIO", temRef]];
+const TIPOS_PDF = [["AVARIAS", "AVARIA", k => k in qtd], ["APROVEITAMENTO REFEITÓRIO", "REFEITORIO", temRef]];
 function pdfPend() { try { return JSON.parse(lsLer(KEY_PDF_PEND) || "{}") || {}; } catch (e) { return {}; } }
 function pdfEnfileirar() {
   const lote = dashLote(), pend = pdfPend(), iso = $("dataPdf").value;
   let n = 0;
   TIPOS_PDF.forEach(([tipoApp, tipo, filtro]) => {
-    if (!Object.keys(qtd).some(filtro)) return;
+    if (!chaves().some(filtro)) return;
     const p = preparar(tipoApp); if (!p) return;
     const doc = fazerPDF(p); if (!doc) return;
     pend[lote + ":" + tipo] = { acao: "pdf", data: iso, lote, tipo, b64: doc.output("datauristring").split(",")[1] };
@@ -1640,23 +1636,17 @@ async function pdfDespachar() {
   renderPassos(); renderDash();
 }
 function renderPassos() {
-  const ks = Object.keys(qtd), nAp = ks.filter(temRef).length, nAv = ks.filter(k => !aprov[k]).length, ligado = !!urlPlanilha(), cod = dashCodigo(), nP = Object.keys(pdfPend()).length;
+  const ks = chaves(), nAp = ks.filter(temRef).length, nAv = ks.filter(k => k in qtd).length, ligado = !!urlPlanilha(), cod = dashCodigo(), nP = Object.keys(pdfPend()).length;
   const linha = (a, b) => `<li><b>${a}</b><span>${b}</span></li>`;
   $("fPassos").innerHTML =
     linha("Avarias", !nAv ? "nenhuma" : !cod ? "falta ligar com código" : feito.fim ? "enviadas ao site" : `${nAv} para o site`) +
     linha("PDF", !ks.length ? "nada lançado" : !cod ? "falta ligar com código" : nP ? "aguardando internet" : feito.fim ? "indo para o e-mail" : "vai para o e-mail da empresa") +
-    linha("Aproveitamento", !nAp ? "nenhum" : feito.fim ? (ligado ? "enviado à planilha" : "conferir no WhatsApp") : ligado ? `${nAp} para a planilha` : `${nAp} para o líder no WhatsApp`);
+    linha("Refeitório", !nAp ? "nenhum" : feito.fim ? (ligado ? "enviado à planilha" : "conferir no WhatsApp") : ligado ? `${nAp} para a planilha` : `${nAp} para o líder no WhatsApp`);
 }
-document.addEventListener("change", e => {
-  const k = e.target.dataset && e.target.dataset.rx; if (!k) return;
-  const v = somar(e.target.value);
-  if (v > 0) { qtdR[k] = fmt(v); e.target.value = qtdR[k]; } else { delete qtdR[k]; e.target.value = ""; }
-  salvarR(); if (vista === "lancados") renderResumo();
-});
 function concluir() {
-  if (!Object.keys(qtd).length) return;
+  if (!chaves().length) return;
   const cod = !!dashCodigo(); // sem código o aproveitamento ainda vai para o líder; avarias e PDFs esperam o código
-  const h = hashTxt(JSON.stringify([qtd, aprov, qtdR]));
+  const h = hashTxt(JSON.stringify([qtd, qtdR]));
   if (cod && feito.fimH === h) { if (!reabrirZap()) msg("Este dia já foi enviado. Nada mudou desde então."); return; }
   $("dataPdf").value = $("envData").value = hojeISO();
   let n = 0;
