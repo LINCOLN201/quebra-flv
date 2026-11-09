@@ -391,7 +391,7 @@ header.top .wrap{padding-block:10px;gap:10px}
 
     <div class="actions">
       <button class="btn ghost" id="fechar" type="button">Voltar</button>
-      <button class="btn danger" id="fZerar" type="button">Zerar para o próximo dia</button>
+      <button class="btn danger" id="fZerar" type="button">Zerar lançamentos</button>
     </div>
     <div class="actions" id="fZerarConf" hidden>
       <button class="btn ghost" id="fZerarNao" type="button">Cancelar</button>
@@ -475,10 +475,20 @@ header.top .wrap{padding-block:10px;gap:10px}
     </div>
   </div>
 </div>
+<div class="sheet" id="popZerar" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="popTit">
+    <h2 id="popTit">Os itens já foram enviados?</h2>
+    <p id="popTxt"></p>
+    <div class="actions">
+      <button class="btn primary" id="popNao" type="button">Não, enviar agora</button>
+      <button class="btn danger" id="popSim" type="button">Sim, zerar</button>
+    </div>
+  </div>
+</div>
 <div class="sheet" id="dashCfg" hidden>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="dashTitle">
     <h2 id="dashTitle">Ligar ao Painel</h2>
-    <p>Digite o código que o líder passou. É feito uma vez só neste celular. Depois, as avarias vão sozinhas ao gerar o PDF.</p>
+    <p>Digite o código que o líder passou. É feito uma vez só neste celular. Depois, as avarias vão ao site quando tocar em Concluir e enviar.</p>
     <label class="field"><span>Código</span><input id="dashInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX"></label>
     <div class="msg err" id="dashMsg" hidden></div>
     <div class="actions">
@@ -892,21 +902,13 @@ $("fDesl").addEventListener("click", () => {
   try { localStorage.removeItem(KEY_URL); } catch (e) {}
   renderFinal(); renderResumo(); toast("Celular desconectado da planilha");
 });
-$("fZerar").addEventListener("click", () => {
-  $("fZerar").hidden = true; $("fZerarConf").hidden = false;
-  // aviso para não perder o aproveitamento antes de zerar
-  const nAp = chaves().filter(temRef).length, ligado = !!urlPlanilha();
-  const pend = aEnviar().filter(x => x.falta > 0).length;
-  if (chaves().length && !feito.fim) msg("Atenção: nada foi enviado ainda. Se zerar agora, estes lançamentos não vão para o site nem para o e-mail.", true);
-  else if (nAp && !ligado && !feito.lider) msg("Atenção: o refeitório ainda não foi mandado para o líder.", true);
-  else if (nAp && ligado && pend) msg("Atenção: ainda tem refeitório que não foi enviado para a planilha.", true);
-});
+$("fZerar").addEventListener("click", () => pedirZerar());
 $("fZerarNao").addEventListener("click", () => { $("fZerar").hidden = false; $("fZerarConf").hidden = true; });
 $("fZerarSim").addEventListener("click", () => $("simLimpar").click());
 $("fechar").addEventListener("click", () => $("sheet").hidden = true);
 $("sheet").addEventListener("click", e => { if (e.target.id === "sheet") $("sheet").hidden = true; });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { ["sheet", "novo", "vinc", "falha", "envio", "cfg", "receb"].forEach(id => $(id).hidden = true); if (rodando || !$("cam").hidden) fecharCamera(); } });
-$("limpar").addEventListener("click", () => { $("zonaLimpar").hidden = true; $("confirmaLimpar").hidden = false; });
+$("limpar").addEventListener("click", () => pedirZerar());
 $("naoLimpar").addEventListener("click", () => { $("zonaLimpar").hidden = false; $("confirmaLimpar").hidden = true; });
 $("simLimpar").addEventListener("click", () => {
   dashNovoLote();
@@ -1659,6 +1661,36 @@ function verificaDia() {
   dashNovoLote(); limparLancados(); $("sheet").hidden = true; renderLanc(); render(); totais();
   toast("Dia novo: a lista anterior já foi enviada e foi limpa.");
 }
+// Zerar sempre pergunta. "Não" envia e depois zera; quando o WhatsApp foi aberto, pergunta na volta se a mensagem foi enviada.
+const KEY_VOLTA = "quebra-flv-zerar-na-volta";
+let popModo = "zerar";
+function abrirPop(modo) {
+  popModo = modo;
+  const n = chaves().length, zap = modo === "zap";
+  $("popTit").textContent = zap ? "A mensagem foi enviada no WhatsApp?" : "Os itens já foram enviados?";
+  $("popTxt").textContent = zap ? "Se foi enviada, a lista será zerada." : `${n} ${n === 1 ? "item lançado" : "itens lançados"}. Se ainda não foram enviados, o app envia agora e depois zera.`;
+  $("popSim").textContent = zap ? "Sim, zerar" : "Sim, já enviei. Zerar";
+  $("popNao").textContent = zap ? "Não, abrir o WhatsApp" : "Não, enviar agora";
+  $("popZerar").hidden = false;
+}
+function pedirZerar() { if (chaves().length) abrirPop("zerar"); }
+function apagarLista() { lsTira(KEY_VOLTA); $("popZerar").hidden = true; $("simLimpar").click(); }
+function zerarDepoisDeEnviar() {
+  if (!diaConcluido()) return; // sem código, por exemplo: nada foi enviado, então nada é apagado
+  if (urlPlanilha()) {
+    let n = 0;
+    const iv = setInterval(() => { n++; if (!aEnviar().some(x => x.falta > 0)) { clearInterval(iv); apagarLista(); } else if (n > 20) clearInterval(iv); }, 1000);
+  } else if (chaves().some(temRef)) lsPor(KEY_VOLTA, "1");
+  else setTimeout(apagarLista, 1200);
+}
+function verificaVolta() { if (lsLer(KEY_VOLTA) && chaves().length && $("popZerar").hidden) abrirPop("zap"); }
+$("popSim").addEventListener("click", apagarLista);
+$("popNao").addEventListener("click", () => {
+  $("popZerar").hidden = true;
+  if (popModo === "zap") { abrirFolha(); reabrirZap(); return; }
+  abrirFolha(); concluir(); zerarDepoisDeEnviar();
+});
+$("popZerar").addEventListener("click", e => { if (e.target.id === "popZerar") { $("popZerar").hidden = true; } });
 function concluir() {
   if (!chaves().length) return;
   const cod = !!dashCodigo(); // sem código o aproveitamento ainda vai para o líder; avarias e PDFs esperam o código
@@ -1675,8 +1707,8 @@ function concluir() {
   else msg(cod ? `Avarias enviadas ao site e ${n === 1 ? "PDF" : "PDFs"} a caminho do e-mail.` : "Ligue este celular com o código (botão abaixo) para enviar avarias e PDFs.", !cod);
 }
 window.addEventListener("online", () => { dashDespachar(); pdfDespachar(); });
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { dashDespachar(); pdfDespachar(); verificaDia(); } });
-renderDash(); dashDespachar(); pdfDespachar(); verificaDia();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { dashDespachar(); pdfDespachar(); verificaDia(); verificaVolta(); } });
+renderDash(); dashDespachar(); pdfDespachar(); verificaDia(); verificaVolta();
 
 chips(); render(); if (!verRecibo()) verRecebido();
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));

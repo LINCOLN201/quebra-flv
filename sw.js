@@ -1,6 +1,6 @@
 // Guarda o app no celular para abrir rápido e funcionar sem internet.
 // Ao publicar uma versão nova, troque o número abaixo.
-const VERSAO = "quebra-flv-v25";
+const VERSAO = "quebra-flv-v26";
 const ARQUIVOS = [
   "./", "index.html", "manifest.webmanifest",
   "vendor/jspdf.umd.min.js", "vendor/jspdf.plugin.autotable.min.js", "vendor/zbar-wasm.js", "vendor/zxing.min.js",
