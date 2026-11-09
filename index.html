@@ -849,7 +849,7 @@ function msg(m, err) { const el = $("pdfMsg"); el.hidden = !m; el.textContent = 
 const KEY_FEITO = "quebra-flv-feito-v1";
 let feito = {};
 try { feito = JSON.parse(localStorage.getItem(KEY_FEITO) || "{}") || {}; } catch (e) { feito = {}; }
-function marcarFeito(chave) { feito[chave] = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); try { localStorage.setItem(KEY_FEITO, JSON.stringify(feito)); } catch (e) {} renderFinal(); mostrarStatusEnvio(); if (chave === "av") dashEnviar(); }
+function marcarFeito(chave) { feito[chave] = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); try { localStorage.setItem(KEY_FEITO, JSON.stringify(feito)); } catch (e) {} renderFinal(); mostrarStatusEnvio(); }
 function renderFinal() {
   const ks = chaves(), nAp = ks.filter(temRef).length, nAv = ks.filter(k => k in qtd).length;
   const nT = ks.length;
@@ -897,7 +897,7 @@ $("fZerar").addEventListener("click", () => {
   // aviso para não perder o aproveitamento antes de zerar
   const nAp = chaves().filter(temRef).length, ligado = !!urlPlanilha();
   const pend = aEnviar().filter(x => x.falta > 0).length;
-  if (chaves().length && !feito.fim) msg("Atenção: o dia ainda não foi finalizado e enviado.", true);
+  if (chaves().length && !feito.fim) msg("Atenção: nada foi enviado ainda. Se zerar agora, estes lançamentos não vão para o site nem para o e-mail.", true);
   else if (nAp && !ligado && !feito.lider) msg("Atenção: o refeitório ainda não foi mandado para o líder.", true);
   else if (nAp && ligado && pend) msg("Atenção: ainda tem refeitório que não foi enviado para a planilha.", true);
 });
@@ -909,7 +909,6 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") { ["sheet", 
 $("limpar").addEventListener("click", () => { $("zonaLimpar").hidden = true; $("confirmaLimpar").hidden = false; });
 $("naoLimpar").addEventListener("click", () => { $("zonaLimpar").hidden = false; $("confirmaLimpar").hidden = true; });
 $("simLimpar").addEventListener("click", () => {
-  if (dashCodigo() && chaves().length) dashEnviar();
   dashNovoLote();
   limparLancados();
   $("dataPdf").value = ""; $("envData").value = ""; $("sheet").hidden = true; renderLanc(); totais(); toast("Lançamentos zerados. Bom próximo dia!");
